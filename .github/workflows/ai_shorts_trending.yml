@@ -24,7 +24,7 @@ on:
         
   schedule:
     # 🔮 RUNS HOURLY, LETS THE SCHEDULER SCRIPT DECIDE
-    # The dedicated posting_schedule.py script now contains all the optimal time logic.
+    # The dedicated optimal_scheduler.py script now contains all the optimal time logic.
     # This is much cleaner and keeps the schedule managed in one central file.
     - cron: '0 * * * *'
 
@@ -67,7 +67,7 @@ jobs:
 
       - name: 📅 Run Mythica Report Scheduler
         id: scheduler
-        run: python .github/scripts/posting_schedule.py
+        run: python .github/scripts/optimal_scheduler.py
 
       - name: 📊 Display Scheduling Decision
         run: |
