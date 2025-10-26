@@ -15,6 +15,7 @@ import os
 import json
 from pathlib import Path
 import subprocess
+import re
 
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 os.makedirs(TMP, exist_ok=True)
@@ -53,6 +54,54 @@ SPEAKER_BY_CONTENT = {
 }
 
 
+def clean_text_for_tts(text):
+    """
+    Clean text for TTS - remove special characters and formatting
+    while preserving natural speech flow
+    """
+    # Store original for comparison
+    original = text
+    
+    # Remove asterisks used for emphasis
+    text = text.replace('*', '')
+    
+    # Remove other formatting characters
+    text = text.replace('_', '')  # Remove underscores
+    text = text.replace('~', '')  # Remove tildes
+    text = text.replace('`', '')  # Remove backticks
+    text = text.replace('^', '')  # Remove carets
+    text = text.replace('#', '')  # Remove hashtags (unless you want "number")
+    text = text.replace('|', '')  # Remove pipes
+    text = text.replace('\\', '')  # Remove backslashes
+    
+    # Clean up brackets that might contain meta information
+    text = re.sub(r'\[.*?\]', '', text)  # Remove content in square brackets
+    text = re.sub(r'\{.*?\}', '', text)  # Remove content in curly brackets
+    
+    # Clean up markdown-style links if any
+    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)  # Convert [text](url) to just text
+    
+    # Remove any HTML tags if present
+    text = re.sub(r'<[^>]+>', '', text)
+    
+    # Clean up multiple spaces that result from removals
+    text = re.sub(r' +', ' ', text)
+    
+    # Clean up multiple line breaks but preserve paragraph structure
+    text = re.sub(r'\n\n+', '\n\n', text)
+    
+    # Remove leading/trailing whitespace from each line
+    lines = text.split('\n')
+    lines = [line.strip() for line in lines]
+    text = '\n'.join(lines)
+    
+    # Remove empty lines that aren't paragraph breaks
+    text = re.sub(r'\n(?!\n)', ' ', text)  # Single newlines to spaces
+    text = re.sub(r' +', ' ', text)  # Clean up multiple spaces again
+    
+    return text.strip()
+
+
 def load_script():
     """Load the generated mystery script"""
     script_path = os.path.join(TMP, "script.json")
@@ -89,15 +138,26 @@ def build_tts_text_for_mystery(script_data):
         cta = script_data.get('cta', '')
         full_script = f"{hook}\n\n{' '.join(bullets)}\n\n{cta}"
     
+    # ✅ CLEAN TEXT FOR TTS - Remove special characters
+    full_script_clean = clean_text_for_tts(full_script)
+    
+    # Show what was cleaned
+    if full_script != full_script_clean:
+        print("🧹 Text cleaned for TTS (removed special characters)")
+        # Show example of what was removed
+        removed_chars = set(re.findall(r'[*_~`^#\[\]\{\}|\\]', full_script))
+        if removed_chars:
+            print(f"   Removed characters: {', '.join(removed_chars)}")
+    
     # The script already has proper paragraph breaks (\n\n)
     # TTS will naturally pause at periods and paragraph breaks
     
     # Count sections for timing (based on paragraph breaks)
-    paragraphs = [p.strip() for p in full_script.split('\n\n') if p.strip()]
+    paragraphs = [p.strip() for p in full_script_clean.split('\n\n') if p.strip()]
     
     print(f"📝 Mystery Narrative Structure:")
     print(f"   Total paragraphs: {len(paragraphs)}")
-    print(f"   Total words: {len(full_script.split())}")
+    print(f"   Total words: {len(full_script_clean.split())}")
     
     # Preview each section
     for i, para in enumerate(paragraphs[:4], 1):
@@ -105,7 +165,7 @@ def build_tts_text_for_mystery(script_data):
         print(f"   Section {i}: {preview}")
     
     # Calculate expected duration
-    word_count = len(full_script.split())
+    word_count = len(full_script_clean.split())
     
     # Mystery pacing: slower for suspense
     base_wpm = {
@@ -140,7 +200,7 @@ def build_tts_text_for_mystery(script_data):
     else:
         print(f"   ✅ Duration within target range (60-90s)")
     
-    return full_script, paragraphs, estimated_duration
+    return full_script_clean, paragraphs, estimated_duration
 
 
 def generate_audio_coqui(text, output_path, speaker_id, speed=0.85):
@@ -154,6 +214,9 @@ def generate_audio_coqui(text, output_path, speaker_id, speed=0.85):
         print(f"\n🔊 Loading Coqui TTS model: {PRIMARY_MODEL}")
         print(f"   🎤 Target speaker: {speaker_id} ({NARRATOR_SPEAKERS.get(speaker_id, 'Unknown')})")
         print(f"   ⚡ Speed: {speed}x (slower for dramatic suspense)")
+        
+        # ✅ Clean text before sending to TTS
+        text_clean = clean_text_for_tts(text)
         
         tts = TTS(model_name=PRIMARY_MODEL, progress_bar=False)
         
@@ -188,7 +251,7 @@ def generate_audio_coqui(text, output_path, speaker_id, speed=0.85):
             # Generate with speaker parameter
             print(f"   🎙️ Generating with speaker={speaker_id}, speed={speed}")
             tts.tts_to_file(
-                text=text,
+                text=text_clean,
                 speaker=speaker_id,
                 file_path=output_path,
                 speed=speed
@@ -197,7 +260,7 @@ def generate_audio_coqui(text, output_path, speaker_id, speed=0.85):
             print(f"   📢 Single-speaker model (no speaker selection)")
             # Generate without speaker parameter
             tts.tts_to_file(
-                text=text,
+                text=text_clean,
                 file_path=output_path,
                 speed=speed
             )
@@ -242,9 +305,12 @@ def generate_audio_espeak(text, output_path, speed_factor=0.85):
     print(f"   Pitch: {pitch} (narrator depth)")
     print(f"   Gap: {gap}ms (clear articulation)")
     
+    # ✅ CLEAN TEXT to be safe
+    text_cleaned = clean_text_for_tts(text)
+    
     # Mystery-specific pause handling
     # Respect paragraph breaks and natural punctuation
-    text_with_pauses = text.replace('\n\n', ' [[800]] ')  # 800ms for paragraph breaks
+    text_with_pauses = text_cleaned.replace('\n\n', ' [[800]] ')  # 800ms for paragraph breaks
     text_with_pauses = text_with_pauses.replace('.', '. [[400]] ')  # 400ms after sentences
     text_with_pauses = text_with_pauses.replace('?', '? [[500]] ')  # 500ms after questions
     text_with_pauses = text_with_pauses.replace("But here's where it gets strange", 
@@ -324,13 +390,16 @@ def generate_audio_with_fallback(full_text, output_path):
     try:
         from TTS.api import TTS
         
+        # ✅ Clean text once for all fallback attempts
+        text_clean = clean_text_for_tts(full_text)
+        
         for fallback_model in FALLBACK_MODELS:
             try:
                 print(f"   Trying: {fallback_model}")
                 tts = TTS(model_name=fallback_model, progress_bar=False)
                 
                 tts.tts_to_file(
-                    text=full_text,
+                    text=text_clean,
                     file_path=output_path
                 )
                 
@@ -383,7 +452,7 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
             para_words = len(paragraph.split())
             
             # Proportional duration based on word count
-            word_duration = (para_words / total_words) * actual_duration
+            word_duration = (para_words / total_words) * actual_duration if total_words > 0 else actual_duration / len(paragraphs)
             
             # Natural pause after paragraph (except last)
             pause_duration = 0.8 if i < len(paragraphs) - 1 else 0.0
