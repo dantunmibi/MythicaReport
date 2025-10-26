@@ -676,7 +676,7 @@ def create_dynamic_music_layer(audio_duration, script_data):
         
         # Trim to match duration
         if music.duration > audio_duration:
-            music = music.subclip(0, audio_duration)
+            music = music.subclipped(0, min(audio_duration, music.duration))
         
         volume_levels = {
             'evening_prime': 0.20,

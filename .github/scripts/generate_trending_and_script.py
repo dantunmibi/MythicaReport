@@ -23,7 +23,7 @@ HISTORY_FILE = os.path.join(TMP, "content_history.json")
 # Extended limit: 120 seconds (for longer vertical videos)
 OPTIMAL_MIN_DURATION = 45   # Sweet spot minimum
 OPTIMAL_MAX_DURATION = 60   # YouTube Shorts official max
-ABSOLUTE_MAX_DURATION = 120 # Absolute maximum (use sparingly)
+ABSOLUTE_MAX_DURATION = 60 # Absolute maximum (use sparingly)
 
 # TTS Reading speed: ~150 words/minute = 2.5 words/second
 # At 0.85x speed (slower for mystery): ~2.1 words/second
