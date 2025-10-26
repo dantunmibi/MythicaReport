@@ -47,55 +47,51 @@ except ImportError:
 def apply_fadein(clip, duration=0.5):
     """Universal fadein that works with any MoviePy version"""
     try:
-        # Try using fx() method (newer API)
-        from moviepy.video.fx.fadein import fadein
-        return clip.fx(fadein, duration)
-    except:
+        # Try crossfadein (MoviePy 2.0+)
+        return clip.crossfadein(duration)
+    except AttributeError:
         try:
-            # Try direct function call
-            from moviepy.video.fx.fadein import fadein
-            return fadein(clip, duration)
+            # Try fx method with fadein
+            import moviepy.video.fx.all as vfx
+            return clip.fx(vfx.fadein, duration)
         except:
-            # Manual implementation fallback
-            def make_fadein(get_frame, t):
-                if t < duration:
-                    return get_frame(t) * (t / duration)
-                return get_frame(t)
-            clip = clip.fl(make_fadein)
+            # No fade support, return clip as-is
+            print("      ⚠️ Fade-in not supported, skipping")
             return clip
 
 def apply_fadeout(clip, duration=0.5):
     """Universal fadeout that works with any MoviePy version"""
     try:
-        from moviepy.video.fx.fadeout import fadeout
-        return clip.fx(fadeout, duration)
-    except:
+        # Try crossfadeout (MoviePy 2.0+)
+        return clip.crossfadeout(duration)
+    except AttributeError:
         try:
-            from moviepy.video.fx.fadeout import fadeout
-            return fadeout(clip, duration)
+            # Try fx method with fadeout
+            import moviepy.video.fx.all as vfx
+            return clip.fx(vfx.fadeout, duration)
         except:
-            def make_fadeout(get_frame, t):
-                if t > clip.duration - duration:
-                    return get_frame(t) * ((clip.duration - t) / duration)
-                return get_frame(t)
-            clip = clip.fl(make_fadeout)
+            # No fade support, return clip as-is
+            print("      ⚠️ Fade-out not supported, skipping")
             return clip
 
 def apply_volumex(clip, factor):
     """Universal volume adjustment that works with any MoviePy version"""
     try:
-        from moviepy.audio.fx.volumex import volumex
-        return clip.fx(volumex, factor)
-    except:
+        # Try multiply_volume (MoviePy 2.0+)
+        return clip.multiply_volume(factor)
+    except AttributeError:
         try:
-            from moviepy.audio.fx.volumex import volumex
-            return volumex(clip, factor)
+            # Try audio_normalize then multiply
+            return clip.with_effects([("multiply_volume", factor)])
         except:
-            # Manual volume adjustment
-            def adjust_volume(get_frame, t):
-                return get_frame(t) * factor
-            clip = clip.fl(adjust_volume)
-            return clip
+            try:
+                # Try fx method
+                import moviepy.audio.fx.all as afx
+                return clip.fx(afx.volumex, factor)
+            except:
+                # Return as-is if no method works
+                print(f"      ⚠️ Volume adjustment not supported, keeping original")
+                return clip
 
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 OUT = os.path.join(TMP, "short.mp4")
