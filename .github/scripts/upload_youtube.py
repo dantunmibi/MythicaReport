@@ -1,4 +1,3 @@
-# .github/scripts/upload_youtube.py
 import os
 import json
 from datetime import datetime
@@ -16,9 +15,9 @@ THUMB = os.path.join(TMP, "thumbnail.png")
 READY_VIDEO = os.path.join(TMP, "short_ready.mp4")
 UPLOAD_LOG = os.path.join(TMP, "upload_history.json")
 
-# 🌱 GARDENING CHANNEL CONFIG
-CHANNEL_NAME = "Sprout Snap"
-CHANNEL_TAGLINE = "Rapid gardening wins under 60 seconds 🌱"
+# 🔮 MYSTERY CHANNEL CONFIG
+CHANNEL_NAME = "Mythica Report"
+CHANNEL_TAGLINE = "Unsolved mysteries that defy explanation 🔮"
 
 # ---- Load Global Metadata ONCE ----
 try:
@@ -28,17 +27,18 @@ except FileNotFoundError:
     print("❌ Error: script.json not found.")
     raise
 
-title = data.get("title", "Garden Tip")
+title = data.get("title", "Mystery Case")
 description = data.get("description", f"{title}")
-hashtags = data.get("hashtags", ["#gardening", "#planttok", "#shorts"])
-topic = data.get("topic", "gardening")
+hashtags = data.get("hashtags", ["#mystery", "#unsolved", "#truecrime", "#shorts"])
+topic = data.get("topic", "mystery")
+mystery_category = data.get("mystery_category", "disappearance")
 
 # ---- Step 1: Validate video ----
 if not os.path.exists(VIDEO):
     raise FileNotFoundError(f"Video file not found: {VIDEO}")
 
 video_size_mb = os.path.getsize(VIDEO) / (1024 * 1024)
-print(f"📹 Gardening video file found: {VIDEO} ({video_size_mb:.2f} MB)")
+print(f"📹 Mystery video file found: {VIDEO} ({video_size_mb:.2f} MB)")
 if video_size_mb < 0.1:
     raise ValueError("Video file is too small, likely corrupted")
 
@@ -51,7 +51,7 @@ if VIDEO != video_output_path:
         try:
             os.rename(VIDEO, video_output_path)
             VIDEO = video_output_path
-            print(f"🎬 Final gardening video renamed to: {video_output_path}")
+            print(f"🎬 Final mystery video renamed to: {video_output_path}")
         except Exception as e:
             print(f"⚠️ Renaming failed: {e}. Using original path.")
     else:
@@ -75,60 +75,83 @@ except Exception as e:
     print(f"❌ Authentication failed: {e}")
     raise
 
-# ---- Step 4: 🌱 Prepare GARDENING-OPTIMIZED metadata ----
-# Enhanced description with gardening-specific CTAs and keywords
+# ---- Step 4: 🔮 Prepare MYSTERY-OPTIMIZED metadata ----
+# Enhanced description with mystery-specific CTAs and keywords
 enhanced_description = f"""{description}
 
 {' '.join(hashtags)}
 
-🌱 {CHANNEL_TAGLINE}
+🔮 {CHANNEL_TAGLINE}
 
 ---
-📅 New gardening tips daily!
-🌿 Grow smarter, greener, and faster with daily plant hacks.
-💚 Follow {CHANNEL_NAME} for more plant care hacks
-🌱 Topics: Plant Care • Propagation • Urban Gardening • Garden Hacks
+🔍 New unsolved mysteries daily!
+👁️ Investigating the unexplained, the mysterious, and the impossible
+🎭 Follow {CHANNEL_NAME} for weekly deep dives into the unknown
+📚 Topics: Unsolved Cases • Paranormal • True Crime • Ancient Mysteries
 
-Follow Sprout Snap:
-YouTube   : @SproutSnap
-Instagram : @SproutSnap
-TikTok    : @SproutSnap
-Facebook  : Sprout Snap
+Follow Mythica Report:
+YouTube   : @MythicaReport
+Instagram : @MythicaReport
+TikTok    : @MythicaReport
+Facebook  : Mythica Report
 
+Mystery Type: {mystery_category.title()}
 Created: {datetime.now().strftime('%Y-%m-%d')}
-Category: Gardening & Home
+Category: Mystery & Investigation
+
+⚠️ Content Warning: This channel covers unsolved mysteries, true crime, and unexplained phenomena. 
+Some cases involve missing persons, deaths, and disturbing events. Viewer discretion advised.
+All information presented is based on public records and available evidence.
 """
 
-# 🌱 GARDENING-SPECIFIC TAGS (optimized for discovery)
-gardening_base_tags = [
-    "gardening",
-    "gardening tips",
-    "plant care",
-    "garden hacks",
-    "urban gardening",
-    "container gardening",
-    "houseplants",
-    "propagation",
-    "grow your own food",
-    "organic gardening",
-    "garden shorts",
-    "planttok",
-    "plant parent"
+# 🔮 MYSTERY-SPECIFIC TAGS (optimized for discovery)
+mystery_base_tags = [
+    "mystery",
+    "unsolved mystery",
+    "true crime",
+    "unexplained",
+    "paranormal",
+    "cold case",
+    "investigation",
+    "unsolved",
+    "disappeared",
+    "mysterious",
+    "conspiracy",
+    "documentary",
+    "mystery shorts",
+    "true crime shorts",
+    "unsolved cases"
 ]
 
-# Combine with script hashtags
-tags = gardening_base_tags.copy()
+# Category-specific tags
+category_tags = {
+    'disappearance': ["missing person", "vanished", "disappeared", "missing", "lost"],
+    'crime': ["true crime", "murder mystery", "cold case", "detective", "investigation"],
+    'paranormal': ["paranormal", "supernatural", "ghost", "haunted", "unexplained"],
+    'historical': ["ancient mystery", "historical", "archaeology", "ancient", "artifact"],
+    'conspiracy': ["conspiracy", "cover up", "declassified", "government secrets", "exposed"],
+    'cryptids': ["cryptid", "creature", "unknown", "bigfoot", "mysterious creature"]
+}
+
+# Combine base tags with category-specific tags
+tags = mystery_base_tags.copy()
+if mystery_category in category_tags:
+    tags.extend(category_tags[mystery_category][:5])
+
+# Add hashtags from script
 if hashtags:
     tags.extend([tag.replace('#', '').lower() for tag in hashtags[:10]])
-tags.append("shorts")
-tags.append("viral")
 
-# Remove duplicates and limit to 15 tags (YouTube limit is 500 chars, ~15 tags is safe)
+# Add generic viral tags
+tags.extend(["shorts", "viral", "scary", "creepy"])
+
+# Remove duplicates and limit to 15 tags (YouTube best practice)
 tags = list(dict.fromkeys(tags))[:15]
 
-print(f"📝 Gardening metadata ready:")
+print(f"📝 Mystery metadata ready:")
 print(f"   Title: {title}")
 print(f"   Channel: {CHANNEL_NAME}")
+print(f"   Mystery Type: {mystery_category}")
 print(f"   Tags: {', '.join(tags[:10])}...")
 print(f"   Hashtags: {' '.join(hashtags[:5])}...")
 
@@ -136,7 +159,8 @@ snippet = {
     "title": title[:100],  # YouTube limit
     "description": enhanced_description[:5000],  # YouTube limit
     "tags": tags,
-    "categoryId": "26"  # 🌱 Category 26 = "Howto & Style" (better for gardening than 28-Science)
+    "categoryId": "24"  # 🔮 Category 24 = "Entertainment" (best for mystery/documentary content)
+    # Alternative: "22" = People & Blogs
 }
 
 body = {
@@ -148,7 +172,7 @@ body = {
     }
 }
 
-print(f"📤 Uploading gardening video to YouTube...")
+print(f"📤 Uploading mystery video to YouTube...")
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=2, min=4, max=60))
 def upload_video(youtube_client, video_path, metadata):
@@ -178,13 +202,13 @@ def upload_video(youtube_client, video_path, metadata):
     return response
 
 try:
-    print("🚀 Starting gardening video upload...")
+    print("🚀 Starting mystery video upload...")
     result = upload_video(youtube, VIDEO, body)
     video_id = result["id"]
     video_url = f"https://www.youtube.com/watch?v={video_id}"
     shorts_url = f"https://www.youtube.com/shorts/{video_id}"
     
-    print(f"✅ Gardening video uploaded successfully!")
+    print(f"✅ Mystery video uploaded successfully!")
     print(f"   Video ID: {video_id}")
     print(f"   Watch URL: {video_url}")
     print(f"   Shorts URL: {shorts_url}")
@@ -201,29 +225,30 @@ except Exception as e:
 # ---- Step 6: Set thumbnail (desktop view) ----
 if os.path.exists(THUMB):
     try:
-        print("🖼️ Setting gardening thumbnail for desktop views...")
+        print("🖼️ Setting noir mystery thumbnail for desktop views...")
         thumb_size_mb = os.path.getsize(THUMB) / (1024*1024)
         if thumb_size_mb > 2:
             print(f"⚠️ Compressing thumbnail ({thumb_size_mb:.2f}MB)...")
             img = Image.open(THUMB)
-            # 🌱 Optimize thumbnail with good quality for garden imagery
-            img.save(THUMB, quality=90, optimize=True)
+            # 🔮 Optimize thumbnail - high quality for dramatic mystery imagery
+            img.save(THUMB, quality=92, optimize=True)
         
         youtube.thumbnails().set(
             videoId=video_id, 
             media_body=MediaFileUpload(THUMB)
         ).execute()
-        print("✅ Gardening thumbnail set successfully (desktop view).")
+        print("✅ Mystery thumbnail set successfully (desktop view).")
     except Exception as e:
         print(f"⚠️ Thumbnail upload failed: {e}")
 else:
     print("⚠️ No thumbnail file found, skipping thumbnail set.")
 
-# ---- Step 7: 🌱 Save upload history with gardening analytics ----
+# ---- Step 7: 🔮 Save upload history with mystery analytics ----
 upload_metadata = {
     "video_id": video_id,
     "title": title,
     "topic": topic,
+    "mystery_category": mystery_category,
     "channel": CHANNEL_NAME,
     "upload_date": datetime.now().isoformat(),
     "video_url": video_url,
@@ -231,8 +256,10 @@ upload_metadata = {
     "hashtags": hashtags,
     "file_size_mb": round(video_size_mb, 2),
     "tags": tags,
-    "category": "Gardening & Home",
-    "content_type": "gardening_short"
+    "category": "Mystery & Entertainment",
+    "content_type": "mystery_short",
+    "estimated_duration": data.get("estimated_duration", 0),
+    "word_count": data.get("word_count", 0)
 }
 
 history = []
@@ -249,25 +276,38 @@ history = history[-100:]  # Keep last 100 uploads
 with open(UPLOAD_LOG, 'w') as f:
     json.dump(history, f, indent=2)
 
-# 🌱 Analytics summary
+# 🔮 Analytics summary
 total_uploads = len(history)
-print(f"\n📊 Channel Stats: {total_uploads} gardening videos uploaded total")
+mystery_type_counts = {}
+for h in history:
+    mcat = h.get('mystery_category', 'unknown')
+    mystery_type_counts[mcat] = mystery_type_counts.get(mcat, 0) + 1
+
+print(f"\n📊 Channel Stats: {total_uploads} mystery videos uploaded total")
+if mystery_type_counts:
+    print(f"📈 Mystery Types:")
+    for mtype, count in sorted(mystery_type_counts.items(), key=lambda x: x[1], reverse=True):
+        print(f"   {mtype.title()}: {count} videos")
 
 print("\n" + "="*70)
-print("🎉 GARDENING VIDEO UPLOAD COMPLETE!")
+print("🎉 MYSTERY VIDEO UPLOAD COMPLETE!")
 print("="*70)
-print(f"🌱 Channel: {CHANNEL_NAME}")
+print(f"🔮 Channel: {CHANNEL_NAME}")
 print(f"📹 Title: {title}")
 print(f"🏷️  Topic: {topic}")
+print(f"🎭 Mystery Type: {mystery_category}")
 print(f"🆔 Video ID: {video_id}")
 print(f"🔗 Shorts URL: {shorts_url}")
 print(f"#️⃣  Hashtags: {' '.join(hashtags[:5])}")
 print(f"🏷️  Tags: {', '.join(tags[:8])}...")
 print("="*70)
-print("\n💡 Gardening Channel Tips:")
-print("   • Best posting time: 6-8 AM (morning gardeners) or 6-8 PM (evening)")
-print("   • Peak season: March-May (spring planting)")
-print("   • Engage with comments within 2 hours for algorithm boost")
-print("   • Cross-post to TikTok 2 hours after YouTube")
+print("\n💡 Mystery Channel Best Practices:")
+print("   • Best posting time: 7-9 PM (evening mystery hour) or 10 PM-12 AM (late night)")
+print("   • Peak season: October (Halloween), Year-round interest")
+print("   • Engage with comments FAST - mystery fans love theories!")
+print("   • Pin a comment asking 'What do YOU think happened?' for engagement")
+print("   • Cross-post to TikTok 1 hour after YouTube")
+print("   • Create playlists by mystery type for binge-watching")
+print("   • Use end screens to link related mysteries")
 print(f"\n🔗 Share this URL: {shorts_url}")
-print("🌱 Keep growing! 🌿")
+print("🔮 Keep investigating the unexplained! 👁️")
