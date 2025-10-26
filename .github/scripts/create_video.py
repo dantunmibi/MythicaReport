@@ -3,6 +3,7 @@
 🔍 Create Mystery Video - PRODUCTION VERSION WITH ENHANCED TEXT DISPLAY
 Python 3.11 + MoviePy 2.0+ Compatible (GitHub Actions Ready)
 ENHANCED: Professional subtitle system with cinematic text presentation
+FIXED: All timing, cleanup, and import issues resolved
 """
 
 import os
@@ -18,6 +19,8 @@ import random
 import subprocess
 import sys
 import numpy as np
+import tempfile
+import atexit
 
 # ✅ FIXED: MoviePy 2.0+ imports (GitHub Actions compatible)
 try:
@@ -110,17 +113,36 @@ NOIR_COLORS = {
     'evidence_tan': (200, 180, 150),
 }
 
-# 🎵 Import music system
-sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
+# ✅ FIXED: Temp file tracking for cleanup
+TEMP_FILES = []
 
+def register_temp_file(filepath):
+    """Register a temp file for cleanup"""
+    TEMP_FILES.append(filepath)
+    return filepath
+
+def cleanup_temp_files():
+    """Clean up all registered temp files"""
+    for filepath in TEMP_FILES:
+        try:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+        except:
+            pass
+
+# Register cleanup on exit
+atexit.register(cleanup_temp_files)
+
+# ✅ FIXED: Safe import of music system
 MUSIC_AVAILABLE = False
 try:
+    script_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
+    sys.path.insert(0, script_dir)
     from download_music import get_music_for_scene, MUSIC_DIR, download_track, MUSIC_LIBRARY
     MUSIC_AVAILABLE = True
     print("✅ Music system imported successfully")
 except ImportError as e:
     print(f"⚠️ Music system not available: {e}")
-
 
 def get_font_path():
     """Get serif/typewriter font for mystery aesthetic"""
@@ -321,7 +343,7 @@ def generate_image_pollinations(prompt, filename, width=1080, height=1920):
         seed = random.randint(1, 999999)
 
         url = (
-            "https://image.pollinaions.ai/prompt/"
+            "https://image.pollinations.ai/prompt/"
             f"{requests.utils.quote(formatted_prompt)}"
             f"?width={width}&height={height}"
             f"&negative={requests.utils.quote(negative_terms)}"
@@ -401,7 +423,7 @@ def generate_mystery_fallback(bg_path, scene_index, mystery_category, width=1080
                 print(f"    ✅ Pexels photo saved (id: {photo_id})")
 
                 img = Image.open(bg_path).convert("RGB")
-                img = img.resized((width, height), Image.LANCZOS)
+                img = img.resize((width, height), Image.LANCZOS)
                 img.save(bg_path, quality=95)
                 return bg_path
     except Exception as e:
@@ -572,62 +594,44 @@ def add_film_grain_noir(img, intensity=0.15):
         return img
 
 
-# ✨ NEW ENHANCED TEXT FUNCTIONS ✨
+# ✨ ENHANCED TEXT FUNCTIONS (FIXED - NO DUPLICATES) ✨
 
-def segment_text_for_display(text, max_words_per_segment=15, max_segments=3):
+def segment_text_for_display(text, max_words_per_segment=10, max_segments=4):
     """
-    Break text into readable segments for progressive display
-    Tries to break at natural sentence boundaries
+    Break text into readable segments for progressive display.
+    Tries to break at natural sentence boundaries.
     """
     sentences = text.replace('...', '.').split('.')
     sentences = [s.strip() for s in sentences if s.strip()]
     
     segments = []
-    current_segment = []
-    current_word_count = 0
+    current_segment_words = []
     
     for sentence in sentences:
         words = sentence.split()
+        if len(current_segment_words) + len(words) > max_words_per_segment and current_segment_words:
+            segments.append(' '.join(current_segment_words) + '.')
+            current_segment_words = []
         
-        # If adding this sentence would exceed max words, start new segment
-        if current_word_count + len(words) > max_words_per_segment and current_segment:
-            segments.append(' '.join(current_segment) + '.')
-            current_segment = []
-            current_word_count = 0
+        current_segment_words.extend(words)
         
-        # Add sentence to current segment
-        current_segment.append(sentence)
-        current_word_count += len(words)
-        
-        # Check if we've reached max segments
         if len(segments) >= max_segments - 1:
             break
-    
-    # Add remaining text as final segment
-    if current_segment:
-        segments.append(' '.join(current_segment) + '.')
-    
-    # If no sentences found, fall back to word-based splitting
-    if not segments:
+            
+    if current_segment_words:
+        segments.append(' '.join(current_segment_words) + ('.' if not ' '.join(current_segment_words).endswith('.') else ''))
+
+    if not segments and text:
         words = text.split()
         for i in range(0, len(words), max_words_per_segment):
-            segment = ' '.join(words[i:i+max_words_per_segment])
-            segments.append(segment)
-            if len(segments) >= max_segments:
-                break
+            segments.append(' '.join(words[i:i + max_words_per_segment]))
     
     return segments[:max_segments]
 
 
-# ✨ REPLACEMENT TEXT SYSTEM - CINEMATIC & ROBUST ✨
-
 def create_text_panel(width, height, opacity=0.85):
     """
     Create enhanced noir text panel with better readability.
-    - Darker background for vertical video
-    - Subtle film grain texture
-    - Gold border accent
-    (This function is well-designed and is kept from the original)
     """
     panel = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(panel)
@@ -650,7 +654,6 @@ def create_text_panel(width, height, opacity=0.85):
 def smart_text_wrap(text, font_size, max_width):
     """
     Improved text wrapping for vertical video.
-    (This function is well-designed and is kept from the original)
     """
     try:
         pil_font = ImageFont.truetype(FONT, font_size)
@@ -684,44 +687,10 @@ def smart_text_wrap(text, font_size, max_width):
     
     return '\n'.join(lines)
 
-def segment_text_for_display(text, max_words_per_segment=10, max_segments=4):
-    """
-    Break text into readable segments for progressive display.
-    Tries to break at natural sentence boundaries.
-    (This function is well-designed and is kept from the original)
-    """
-    sentences = text.replace('...', '.').split('.')
-    sentences = [s.strip() for s in sentences if s.strip()]
-    
-    segments = []
-    current_segment_words = []
-    
-    for sentence in sentences:
-        words = sentence.split()
-        if len(current_segment_words) + len(words) > max_words_per_segment and current_segment_words:
-            segments.append(' '.join(current_segment_words) + '.')
-            current_segment_words = []
-        
-        current_segment_words.extend(words)
-        
-        if len(segments) >= max_segments - 1:
-            break
-            
-    if current_segment_words:
-        segments.append(' '.join(current_segment_words) + ('.' if not ' '.join(current_segment_words).endswith('.') else ''))
-
-    if not segments and text:
-        words = text.split()
-        for i in range(0, len(words), max_words_per_segment):
-            segments.append(' '.join(words[i:i + max_words_per_segment]))
-    
-    return segments[:max_segments]
 
 def create_cinematic_text_clip(text, font_size, duration, start_time, position='lower_third', panel_bg=True):
     """
-    ✅ FIXED: Creates a robust, pre-rendered text clip using PIL.
-    This avoids MoviePy's text rendering bugs and ensures perfect alignment.
-    The text and its background panel are combined into a single image.
+    ✅ FIXED: Creates a robust, pre-rendered text clip using PIL with cleanup.
     """
     # 1. Wrap text and get its dimensions
     wrapped_text = smart_text_wrap(text, font_size, TEXT_MAX_WIDTH)
@@ -735,7 +704,7 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
     try:
         bbox = dummy_draw.textbbox((0, 0), wrapped_text, font=pil_font, stroke_width=2)
         text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    except Exception: # Fallback for older PIL
+    except Exception:
         text_width, text_height = dummy_draw.textsize(wrapped_text, font=pil_font)
 
     # 2. Create the composite image (panel + text) using PIL
@@ -762,6 +731,9 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
     # 3. Save the composite image to a temporary file
     comp_path = os.path.join(TMP, f"text_comp_{time.time()}_{random.randint(1000, 9999)}.png")
     final_image.save(comp_path)
+    
+    # ✅ FIXED: Register for cleanup
+    register_temp_file(comp_path)
 
     # 4. Position and animate this single, robust image clip in MoviePy
     if position == 'lower_third':
@@ -785,10 +757,7 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
 
 def create_enhanced_scene(image_path, text, duration, start_time, scene_index=0):
     """
-    ✅ FIXED & REWRITTEN: Creates a scene with professionally timed and rendered text.
-    - Breaks long paragraphs into readable, sequential chunks.
-    - Each chunk is a self-contained, faded clip, perfectly timed.
-    - Eliminates sync issues and rendering bugs.
+    ✅ FIXED: Creates a scene with professionally timed and rendered text.
     """
     scene_clips = []
     
@@ -809,8 +778,6 @@ def create_enhanced_scene(image_path, text, duration, start_time, scene_index=0)
     if not text or not text.strip():
         return scene_clips
         
-    # --- FIXED SEGMENTATION AND TIMING LOGIC ---
-    
     # 1. Break paragraph into smaller, readable segments for display
     segments = segment_text_for_display(text, max_words_per_segment=12, max_segments=4)
     if not segments: return scene_clips
@@ -856,6 +823,8 @@ def create_enhanced_scene(image_path, text, duration, start_time, scene_index=0)
         current_segment_time += seg_dur
 
     return scene_clips
+
+
 # 🎵 MUSIC INTEGRATION
 
 def ensure_music_downloaded():
@@ -1028,105 +997,94 @@ print(f"✅ All mystery scenes validated")
 
 # --- Audio Loading & Timing ---
 
-# --- Audio Loading & Timing ---
-
 if not os.path.exists(audio_path):
     print(f"❌ Audio not found: {audio_path}")
     raise FileNotFoundError("voice.mp3 missing")
 
-# Convert to WAV for frame-accurate timing (avoids MP3 encoder delay)
+# ✅ FIXED: WAV conversion with proper error handling
 wav_path = os.path.join(TMP, "voice.wav")
 try:
-    AudioSegment.from_file(audio_path).export(wav_path, format="wav")
+    audio_segment = AudioSegment.from_file(audio_path)
+    audio_segment.export(wav_path, format="wav")
     print("✅ Converted audio to WAV for accurate timing.")
+    working_audio_path = wav_path
 except Exception as e:
     print(f"⚠️ WAV conversion failed ({e}), using original MP3.")
-    wav_path = audio_path
+    working_audio_path = audio_path
 
-
-audio = AudioFileClip(wav_path)
+audio = AudioFileClip(working_audio_path)
 duration = audio.duration
 print(f"🎵 Audio Duration: {duration:.2f}s")
 
 # ✅ SYNC FIX: Detect silence and define the actual speech window
-lead_silence, trail_silence = detect_leading_trailing_silence(wav_path)
+lead_silence, trail_silence = detect_leading_trailing_silence(working_audio_path)
 manual_offset = float(os.getenv("SYNC_OFFSET_S", "0.0")) # Optional fine-tuning via env var
 start_offset = lead_silence + manual_offset
 speech_duration = max(0.1, duration - lead_silence - trail_silence)
 
 print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_duration:.3f}s")
 
-
+# ✅ FIXED: Simplified and robust timing calculation
 timing_data = load_audio_timing()
 paragraph_durations = []
-paragraph_starts = []
-use_explicit_starts = False
+scene_starts = []
 
 if timing_data and timing_data.get('optimized'):
-    print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
-    sections = timing_data['sections']
+    sections = timing_data.get('sections', [])
     
-    # Check if the metadata contains absolute start times
-    first_section = sections[0] if sections else {}
-    if 'start' in first_section and 'duration' in first_section:
-        use_explicit_starts = True
-        print("   ✅ Metadata contains absolute start/duration times.")
-        
+    # Check if we have complete timing data
+    has_complete_timing = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
+    
+    if has_complete_timing:
+        print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
         for i, paragraph in enumerate(paragraphs):
-            para_section = next((s for s in sections if s.get('name') == f'paragraph_{i+1}'), None)
-            if para_section:
-                # Use exact timings from the TTS provider
-                p_start = float(para_section['start'])
-                p_dur = float(para_section['duration'])
-                paragraph_starts.append(p_start)
-                paragraph_durations.append(p_dur)
-                print(f"   Paragraph {i+1}: start={p_start:.2f}s, dur={p_dur:.2f}s (Metadata)")
-            else:
-                # Fallback for a missing paragraph in metadata
-                est_dur = estimate_duration_fallback(paragraph, speech_duration, paragraphs)
-                paragraph_starts.append(-1) # Mark as estimated
-                paragraph_durations.append(est_dur)
-                print(f"   Paragraph {i+1}: {est_dur:.2f}s (Estimated)")
-
+            if i < len(sections):
+                scene_starts.append(sections[i]['start'] + start_offset)
+                paragraph_durations.append(sections[i]['duration'])
+                print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={paragraph_durations[-1]:.2f}s")
     else:
-        # If metadata only has durations, not start times
-        print("   ⚠️ Metadata only contains durations, distributing them across speech window.")
-        for i, paragraph in enumerate(paragraphs):
-            para_section = next((s for s in sections if s['name'] == f'paragraph_{i+1}'), None)
-            dur = para_section['duration'] if para_section else estimate_duration_fallback(paragraph, speech_duration, paragraphs)
-            paragraph_durations.append(dur)
-        
-        # Normalize durations to fit the speech window perfectly
-        total_calculated = sum(paragraph_durations)
-        if total_calculated > 0:
-            scale_factor = speech_duration / total_calculated
-            paragraph_durations = [d * scale_factor for d in paragraph_durations]
-            print(f"   ✅ Normalized paragraph durations by factor {scale_factor:.4f}")
+        print("\n⚠️ Incomplete timing metadata, using proportional distribution...")
+        timing_data = None
 
-else:
-    print("\n⚠️ No timing metadata, using word-based estimation across speech window.")
+# Fallback to proportional timing
+if not scene_starts:
+    print("\n📊 Using proportional timing based on word count...")
     total_words = sum(len(p.split()) for p in paragraphs if p)
+    current_time = start_offset
+    
     for paragraph in paragraphs:
-        words = len(paragraph.split())
-        dur = (words / total_words) * speech_duration if total_words > 0 else speech_duration / max(1, len(paragraphs))
-        paragraph_durations.append(max(2.0, dur))
+        scene_starts.append(current_time)
+        
+        if total_words > 0:
+            word_count = len(paragraph.split())
+            dur = (word_count / total_words) * speech_duration
+        else:
+            dur = speech_duration / max(1, len(paragraphs))
+        
+        dur = max(2.0, dur)  # Minimum 2 seconds per paragraph
+        paragraph_durations.append(dur)
+        current_time += dur
+        
+        print(f"   Paragraph {len(scene_starts)}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
 
+# ✅ FIXED: Normalize to fit speech window exactly
+total_calculated = sum(paragraph_durations)
+if total_calculated > 0 and abs(total_calculated - speech_duration) > 0.5:
+    scale_factor = speech_duration / total_calculated
+    paragraph_durations = [d * scale_factor for d in paragraph_durations]
+    
+    # Recalculate scene starts
+    current_time = start_offset
+    scene_starts = []
+    for dur in paragraph_durations:
+        scene_starts.append(current_time)
+        current_time += dur
+    
+    print(f"   ✅ Normalized timings by factor {scale_factor:.3f}")
 
 # --- Video Composition with Enhanced Text ---
 
 clips = []
-scene_starts = []
-
-# ✅ SYNC FIX: Calculate absolute start times for each scene
-if use_explicit_starts:
-    # Use metadata start times, but offset by the detected silence
-    scene_starts = [start_offset + ps for ps in paragraph_starts]
-else:
-    # Sequentially stack durations, starting after the initial silence
-    current_time = start_offset
-    for dur in paragraph_durations:
-        scene_starts.append(current_time)
-        current_time += dur
 
 print("\n🎬 Building scenes with precise start times...")
 for i, paragraph in enumerate(paragraphs):
@@ -1145,11 +1103,11 @@ for i, paragraph in enumerate(paragraphs):
         scene_images[img_idx], 
         paragraph,
         dur,
-        start_time, # Pass the absolute start time
+        start_time,
         scene_index=i
     ))
 
-# ✅ SYNC FIX: More accurate sync check
+# ✅ SYNC CHECK
 timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
 speech_end = duration - trail_silence
 final_drift = abs(timeline_end - speech_end)
@@ -1177,19 +1135,15 @@ background_music = create_dynamic_music_layer(duration, data)
 if background_music:
     try:
         voice_adjusted = apply_volumex(audio, 1.0)
-
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
-        # ✅ FIXED: Use with_audio instead of set_audio (MoviePy 2.0+)
         video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
     except Exception as e:
         print(f"   ⚠️ Music compositing failed: {e}")
         import traceback
         traceback.print_exc()
-        # ✅ FIXED: Use with_audio for fallback too
         video = video.with_audio(audio)
 else:
-    # ✅ FIXED: Use with_audio for fallback
     video = video.with_audio(audio)
     print(f"   ⚠️ Audio: TTS only (no background music)")
 
@@ -1211,7 +1165,8 @@ try:
         logger=None
     )
 
-    sync_status = "NEAR-PERFECT" if abs(current_time - duration) < 0.05 else "EXCELLENT" if abs(current_time - duration) < 0.5 else "GOOD"
+    final_time = scene_starts[-1] + paragraph_durations[-1] if scene_starts else duration
+    sync_status = "NEAR-PERFECT" if abs(final_time - duration) < 0.05 else "EXCELLENT" if abs(final_time - duration) < 0.5 else "GOOD"
 
     print(f"\n✅ MYSTERY VIDEO COMPLETE!")
     print(f"   Path: {OUT}")
@@ -1228,7 +1183,7 @@ try:
         print(f"   ✅ Within YouTube Shorts limit ({60 - duration:.2f}s buffer)")
 
     print(f"   Size: {os.path.getsize(OUT) / (1024*1024):.2f} MB")
-    print(f"   Sync Status: {sync_status} ({abs(current_time - duration)*1000:.0f}ms drift)")
+    print(f"   Sync Status: {sync_status} ({abs(final_time - duration)*1000:.0f}ms drift)")
     print(f"   Features:")
     print(f"      ✓ Film noir aesthetic")
     print(f"      ✓ Heavy vignette + film grain")
@@ -1254,6 +1209,10 @@ except Exception as e:
 
 finally:
     print("🧹 Cleanup...")
+    # Clean up temp files
+    cleanup_temp_files()
+    
+    # Close all clips
     try:
         audio.close()
     except:

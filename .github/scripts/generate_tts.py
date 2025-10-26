@@ -73,6 +73,8 @@ def clean_text_for_tts(text):
     text = text.replace('#', '')  # Remove hashtags (unless you want "number")
     text = text.replace('|', '')  # Remove pipes
     text = text.replace('\\', '')  # Remove backslashes
+    text = text.replace('PM', 'P M')  # Separate PM for clarity 
+    text = text.replace('AM', 'A M')  # Separate AM for clarity
     
     # Clean up brackets that might contain meta information
     text = re.sub(r'\[.*?\]', '', text)  # Remove content in square brackets
