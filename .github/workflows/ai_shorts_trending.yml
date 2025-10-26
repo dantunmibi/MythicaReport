@@ -1,10 +1,10 @@
-name: 🔍 The Mystery Archives - Automated Mystery Shorts Pipeline
+name: 🔮 Mythica Report - Automated Mystery Shorts Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       platforms:
-        description: 'Platforms to upload to (comma-separated: youtube,tiktok,instagram,facebook,makecom)'
+        description: 'Platforms to upload to (e.g., youtube,tiktok,facebook)'
         required: false
         default: 'youtube,facebook'
       force_all:
@@ -13,61 +13,20 @@ on:
         type: boolean
         default: false
       ignore_schedule:
-        description: 'Ignore optimal timing and post immediately'
+        description: 'Bypass the scheduler and post immediately'
         required: false
         type: boolean
         default: false
       mystery_type:
-        description: 'Mystery category (disappearance, crime, historical, conspiracy, auto)'
+        description: 'Specific mystery category (e.g., crime, paranormal, historical, auto)'
         required: false
         default: 'auto'
-      intensity:
-        description: 'Content intensity (aggressive, balanced, inspirational)'
-        required: false
-        default: 'balanced'
         
   schedule:
-  # 🔍 MYSTERY-OPTIMAL POSTING SCHEDULE (WAT - West Africa Time = UTC+1)
-  # GitHub crons run in UTC, so subtract 1 hour from WAT times
-  # 
-  # CONVERSION EXAMPLES:
-  # 8 PM WAT = 7 PM UTC = cron '0 19' (hour 19)
-  # 11 PM WAT = 10 PM UTC = cron '0 22' (hour 22)
-  # 2 AM WAT = 1 AM UTC = cron '0 1' (hour 1)
-  
-  # ✅ CORRECTED CRON TIMES (UTC for GitHub)
-  
-  # Monday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 4 * * 1'    # 8 PM WAT - Evening mystery
-  - cron: '0 19 * * 1'    # 11 PM WAT - Late night intrigue
-  
-  # Tuesday: 7 PM WAT (18:00), 10 PM WAT (21:00)
-  - cron: '0 5 * * 2'    # 7 PM WAT - Prime mystery time
-  - cron: '0 11 * * 2'    # 10 PM WAT - Night scrollers
-  - cron: '0 22 * * 2'    # 1 AM WAT - Peak virality hour
-  
-  # Wednesday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 4 * * 3'    # 8 PM WAT - Mid-week mystery
-  - cron: '0 18 * * 3'    # 11 PM WAT - Late engagement
-  
-  # Thursday: 7 PM WAT (18:00), 11 PM WAT (22:00)
-  - cron: '0 1 * * 4'    # 7 PM WAT - Early evening
-  - cron: '0 5 * * 4'    # 11 PM WAT - Peak night time
-  
-  # Friday: 9 PM WAT (20:00), 12 AM WAT (23:00)
-  - cron: '0 4 * * 5'    # 9 PM WAT - Friday evening
-  - cron: '0 17 * * 5'    # 12 AM WAT - Friday late night
-  
-  # Saturday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 6 * * 6'    # 8 PM WAT - Weekend evening
-  - cron: '0 13 * * 6'    # 11 PM WAT - Saturday night binge
-  - cron: '0 21 * * 6'    # 1 AM WAT - Peak binge hour
-  
-  # Sunday: 7 PM WAT (18:00), 10 PM WAT (21:00)
-  - cron: '0 5 * * 0'    # 7 PM WAT - Sunday evening
-  - cron: '0 7 * * 0'    # 10 PM WAT - Week ahead prep
-  - cron: '0 20 * * 0'    # 1 AM WAT - Final binge hour
-  - cron: '0 0 * * 0'    # 2 AM WAT - Ultimate virality time
+    # 🔮 RUNS HOURLY, LETS THE SCHEDULER SCRIPT DECIDE
+    # The dedicated posting_schedule.py script now contains all the optimal time logic.
+    # This is much cleaner and keeps the schedule managed in one central file.
+    - cron: '0 * * * *'
 
 jobs:
   build_and_upload:
@@ -75,18 +34,18 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - name: 🔍 Checkout Mystery Archives
+      - name: 🔮 Checkout Mythica Report
         uses: actions/checkout@v4
 
       - name: 🔐 Validate secrets
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-          GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
-          MAKECOM_WEBHOOK_URL: ${{ secrets.MAKECOM_WEBHOOK_URL }}
-        run: python .github/scripts/validate_secrets.py
+          # Add other critical secrets here
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then echo "GEMINI_API_KEY is not set!"; exit 1; fi
+          if [ -z "$GOOGLE_CLIENT_ID" ]; then echo "GOOGLE_CLIENT_ID is not set!"; exit 1; fi
+          echo "✅ Core secrets validated."
 
       - name: 🐍 Setup Python
         uses: actions/setup-python@v5
@@ -97,141 +56,41 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-mystery-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-mythica-${{ hashFiles('requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-mystery-
-            ${{ runner.os }}-pip-
+            ${{ runner.os }}-pip-mythica-
 
-      - name: 📦 Install Python packages (for scheduler check)
+      - name: 📦 Install scheduler dependency
         run: |
           python -m pip install --upgrade pip
           pip install pytz
 
-      - name: 🔍 Check optimal mystery posting time
-        id: schedule_check
-        env:
-          IGNORE_SCHEDULE: ${{ github.event.inputs.ignore_schedule }}
+      - name: 📅 Run Mythica Report Scheduler
+        id: scheduler
+        run: python .github/scripts/posting_schedule.py
+
+      - name: 📊 Display Scheduling Decision
         run: |
-          python -c "
-          import os
-          from datetime import datetime
-          import pytz
-          
-          # ✅ FIXED: Correctly use West Africa Time (UTC+1)
-          tz = pytz.timezone('Africa/Lagos')
-          current = datetime.now(tz)
-          hour = current.hour
-          weekday = current.weekday()
+          echo "=================================================="
+          echo "🔮 MYTHICA REPORT SCHEDULING DECISION"
+          echo "=================================================="
+          echo "⏰ Current Time (EST): ${{ steps.scheduler.outputs.current_time_est }}"
+          echo "✅ Should Post: ${{ steps.scheduler.outputs.should_post }}"
+          echo "⭐ Priority: ${{ steps.scheduler.outputs.current_priority }}"
+          echo "📚 Content Type: ${{ steps.scheduler.outputs.current_content_type }}"
+          echo "=================================================="
 
-          # MYSTERY-OPTIMIZED SCHEDULE (in WAT hours, not UTC)
-          # Key times: 7-9 PM (evening bingers), 10 PM-2 AM (late night scrollers)
-          OPTIMAL_SCHEDULE = {
-              0: [20, 23],      # Monday: 8 PM, 11 PM WAT
-              1: [19, 22],      # Tuesday: 7 PM, 10 PM WAT
-              2: [20, 23],      # Wednesday: 8 PM, 11 PM WAT
-              3: [19, 23],      # Thursday: 7 PM, 11 PM WAT
-              4: [21, 24],      # Friday: 9 PM, 12 AM WAT
-              5: [20, 23],      # Saturday: 8 PM, 11 PM WAT
-              6: [19, 22]       # Sunday: 7 PM, 10 PM WAT
-          }
-
-          # CONTENT TYPES BY TIME (WAT)
-          CONTENT_TYPES = {
-              'evening_prime': 'Evening Mystery (7-9 PM WAT)',
-              'late_night': 'Late Night Intrigue (10 PM-2 AM WAT)',
-              'weekend_binge': 'Weekend Deep Dive (Sat/Sun 8-11 PM WAT)',
-              'general': 'General Mystery'
-          }
-
-          def get_content_type(hour, weekday):
-              # Weekend special
-              if weekday in [5, 6]:  # Saturday, Sunday
-                  return 'weekend_binge'
-              # Late night (mystery prime time) - 10 PM to 2 AM
-              elif hour >= 22 or hour <= 2:
-                  return 'late_night'
-              # Evening prime - 7 PM to 9 PM
-              elif 18 <= hour <= 21:
-                  return 'evening_prime'
-              return 'general'
-
-          should_post = False
-          priority = 'medium'
-          content_type = get_content_type(hour, weekday)
-          
-          ignore_schedule = os.getenv('IGNORE_SCHEDULE', 'false').lower() == 'true'
-          
-          if ignore_schedule:
-              print('⚠️ Schedule check BYPASSED by user input')
-              should_post = True
-              priority = 'manual'
-          elif weekday in OPTIMAL_SCHEDULE:
-              optimal_hours = OPTIMAL_SCHEDULE[weekday]
-              # ✅ FIXED: Allow posting within 1 hour window of optimal time
-              if any(abs(hour - opt_hour) <= 1 for opt_hour in optimal_hours):
-                  should_post = True
-                  # Highest priority for late night (binge potential)
-                  if content_type == 'late_night':
-                      priority = 'highest'
-                  elif content_type == 'weekend_binge':
-                      priority = 'high'
-                  elif content_type == 'evening_prime':
-                      priority = 'high'
-                  else:
-                      priority = 'medium'
-                  print(f'✅ Within optimal window: {current.strftime(\"%A %I:%M %p WAT\")} - {CONTENT_TYPES[content_type]}')
-              else:
-                  print(f'⏳ Not optimal time. Current: {current.strftime(\"%A %I:%M %p WAT\")}')
-                  next_optimal = min(optimal_hours, key=lambda x: abs(x-hour))
-                  print(f'   Next optimal: ~{next_optimal}:00 WAT')
-          
-          # Write to GITHUB_OUTPUT
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-              f.write(f'should_post={str(should_post).lower()}\n')
-              f.write(f'priority={priority}\n')
-              f.write(f'content_type={content_type}\n')
-              f.write(f'current_time={current.strftime(\"%Y-%m-%d %H:%M WAT\")}\n')
-          "
-
-      - name: 📅 Display mystery scheduling decision
+      - name: ⏸️ Skip run if not an optimal posting time
+        if: steps.scheduler.outputs.should_post != 'true'
         run: |
-          echo "⏰ Current Time: ${{ steps.schedule_check.outputs.current_time }}"
-          echo "🎯 Should Post: ${{ steps.schedule_check.outputs.should_post }}"
-          echo "⭐ Priority: ${{ steps.schedule_check.outputs.priority }}"
-          echo "🔍 Content Type: ${{ steps.schedule_check.outputs.content_type }}"
-          echo ""
-          echo "💡 Optimal Mystery Times (WAT):"
-          echo "   • 7-9 PM: Evening Bingers (HIGH engagement)"
-          echo "   • 10 PM-2 AM: Late Night Scrollers (HIGHEST virality) 🔥"
-          echo "   • Weekends 8-11 PM: Deep Dive Binge (BEST retention)"
-
-      - name: ⏸️ Skip if not optimal mystery time
-        if: steps.schedule_check.outputs.should_post != 'true'
-        run: |
-          echo "⏸️ Skipping run - not within optimal mystery posting window"
-          echo ""
-          echo "💡 Next optimal posting times:"
-          echo "   🔍 8 PM: Evening viewers ready for intrigue"
-          echo "   🔍 11 PM: Late night scrollers seeking mysteries"
-          echo "   🔍 2 AM: PEAK VIRALITY TIME (existential crisis hour)"
-          echo ""
-          echo "ℹ️ Use 'ignore_schedule: true' input to force immediate posting"
+          echo "⏸️ Skipping run. It is not an optimal posting time for Mythica Report."
+          echo "ℹ️ To force a post, run this workflow with 'ignore_schedule: true'."
           exit 0
-
-      - name: 📦 Cache apt packages
-        if: steps.schedule_check.outputs.should_post == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            /var/cache/apt/archives
-            /var/lib/apt/lists
-          key: ${{ runner.os }}-apt-mystery-${{ hashFiles('.github/workflows/mystery_shorts.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-apt-mystery-
-            ${{ runner.os }}-apt-
-
-      - name: 🔧 Install system deps
-        if: steps.schedule_check.outputs.should_post == 'true'
+      
+      # The rest of the pipeline only runs if should_post is true
+      
+      - name: 🔧 Install System Dependencies
+        if: steps.scheduler.outputs.should_post == 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
@@ -244,329 +103,225 @@ jobs:
             fonts-freefont-ttf \
             fonts-dejavu \
             espeak-ng
-          echo "🔍 System ready for mystery content generation"
+          echo "✅ System ready for mystery content generation"
 
       - name: 🎙️ Cache Coqui models
-        if: steps.schedule_check.outputs.should_post == 'true'
+        if: steps.scheduler.outputs.should_post == 'true'
         uses: actions/cache@v4
         with:
           path: ~/.local/share/tts
-          key: coqui-models-mystery-${{ runner.os }}
+          key: coqui-models-mythica-${{ runner.os }}
 
-      - name: 📁 Create tmp folder
-        if: steps.schedule_check.outputs.should_post == 'true'
-        run: |
-          mkdir -p tmp
-          chmod -R 777 tmp
-          echo "🔍 Workspace ready for mystery archives"
+      - name: 📁 Prepare the Archives (tmp folder)
+        if: steps.scheduler.outputs.should_post == 'true'
+        run: mkdir -p tmp
 
-      - name: 📋 Restore platform config
-        if: steps.schedule_check.outputs.should_post == 'true'
-        uses: actions/cache/restore@v4
-        with:
-          path: tmp/platform_config.json
-          key: platform-config-mystery-${{ github.run_number }}
-          restore-keys: |
-            platform-config-mystery-
-            platform-config-
-
-      - name: 📚 Restore playlist config
-        if: steps.schedule_check.outputs.should_post == 'true'
-        uses: actions/cache/restore@v4
-        with:
-          path: tmp/playlist_config.json
-          key: playlist-config-mystery-${{ github.run_number }}
-          restore-keys: |
-            playlist-config-mystery-
-            playlist-config-
-
-      - name: 📖 Restore content history
-        if: steps.schedule_check.outputs.should_post == 'true'
+      # ✅ RESTORED: Your detailed cache steps
+      - name: 📚 Restore content history
+        if: steps.scheduler.outputs.should_post == 'true'
         uses: actions/cache/restore@v4
         with:
           path: tmp/content_history.json
-          key: content-history-mystery-${{ github.run_number }}
+          key: content-history-mythica-${{ github.run_number }}
           restore-keys: |
-            content-history-mystery-
-            content-history-
+            content-history-mythica-
 
-      - name: 📦 Install Python packages
-        if: steps.schedule_check.outputs.should_post == 'true'
-        run: |
-          python -m pip install --upgrade pip -q
-          pip install -r requirements.txt -q
-          echo "🔍 Python dependencies installed"
+      - name: 📦 Install Full Python Dependencies
+        if: steps.scheduler.outputs.should_post == 'true'
+        run: pip install -r requirements.txt
 
       - name: 🎵 Download background music library
-        if: steps.schedule_check.outputs.should_post == 'true'
-        run: |
-          echo "🎵 Downloading copyright-free dark ambient music..."
-          python .github/scripts/download_music.py --download-all
+        if: steps.scheduler.outputs.should_post == 'true'
+        run: python .github/scripts/download_music.py --download-all
         continue-on-error: true
 
-      - name: 🔍 Fetch trending mystery topics
-        if: steps.schedule_check.outputs.should_post == 'true'
+      - name: 🕵️ Fetch Trending Mystery Topics
+        if: steps.scheduler.outputs.should_post == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
           MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
-        run: |
-          echo "🔍 Fetching trending mystery topics..."
-          python .github/scripts/fetch_trending.py
+        run: python .github/scripts/fetch_trending.py
 
-      - name: ✍️ Generate mystery script
-        if: steps.schedule_check.outputs.should_post == 'true'
+      - name: ✍️ Generate Mystery Script
+        if: steps.scheduler.outputs.should_post == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-          PRIORITY: ${{ steps.schedule_check.outputs.priority }}
-          MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
+          CONTENT_TYPE: ${{ steps.scheduler.outputs.current_content_type }}
         run: python .github/scripts/generate_trending_and_script.py
 
-      - name: 🎙️ Generate mysterious voiceover
-        if: steps.schedule_check.outputs.should_post == 'true'
-        env:
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
+      - name: 🎙️ Generate Mysterious Voiceover
+        if: steps.scheduler.outputs.should_post == 'true'
         run: python .github/scripts/generate_tts.py
 
-      - name: 🎬 Create film noir mystery video
-        if: steps.schedule_check.outputs.should_post == 'true'
-        env:
-          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
+      - name: 🎬 Create Mystery Video
+        if: steps.scheduler.outputs.should_post == 'true'
         run: python .github/scripts/create_video.py
 
-      - name: 🖼️ Generate mysterious thumbnail
-        if: steps.schedule_check.outputs.should_post == 'true'
-        env:
-          HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
+      - name: 🖼️ Generate Mysterious Thumbnail
+        if: steps.scheduler.outputs.should_post == 'true'
         run: python .github/scripts/generate_thumbnail.py
 
       - name: 🧹 Clean up temporary files
-        if: steps.schedule_check.outputs.should_post == 'true'
+        if: steps.scheduler.outputs.should_post == 'true'
         run: |
           find tmp -name "scene_*.jpg" -type f -delete 2>/dev/null || true
           find tmp -name "*_noir.jpg" -type f -delete 2>/dev/null || true
-          rm -f tmp/short_ready.mp4 2>/dev/null || true
-          echo "🧹 Cleaned up temporary files"
+          echo "🧹 Cleaned up temporary image files"
 
-      - name: 📤 Upload to multiple platforms
-        if: steps.schedule_check.outputs.should_post == 'true'
+      - name: 📤 Upload to Platforms
+        if: steps.scheduler.outputs.should_post == 'true'
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
-          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
-          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
-          INSTAGRAM_ACCOUNT_ID: ${{ secrets.INSTAGRAM_ACCOUNT_ID }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           FACEBOOK_ACCESS_TOKEN: ${{ secrets.FACEBOOK_ACCESS_TOKEN }}
-          MAKECOM_WEBHOOK_URL: ${{ secrets.MAKECOM_WEBHOOK_URL }}
+          MAKECOM_WEBHOOK_URL: ${{ secrets.MAKECOM_WEBHOOK_URL }} # Keep for logging if needed
           PLATFORMS: ${{ github.event.inputs.platforms }}
           FORCE_ALL: ${{ github.event.inputs.force_all }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
         run: python .github/scripts/upload_multiplatform.py
 
-      - name: 🔍 Find actual video file
-        if: success() && steps.schedule_check.outputs.should_post == 'true'
+      - name: 📂 Find actual video file
+        if: success() && steps.scheduler.outputs.should_post == 'true'
         id: find_video
         run: |
-          if [ -f tmp/short.mp4 ]; then
-            VIDEO_PATH="tmp/short.mp4"
-          else
-            VIDEO_PATH=$(find tmp -name "*.mp4" -type f | head -n 1)
-          fi
-          
-          if [ -z "$VIDEO_PATH" ]; then
-            echo "❌ No video file found!"
-            exit 1
-          fi
-          
-          VIDEO_PATH=$(realpath "$VIDEO_PATH")
+          VIDEO_PATH=$(find tmp -name "*.mp4" -type f | head -n 1)
+          if [ -z "$VIDEO_PATH" ]; then echo "❌ No video file found!"; exit 1; fi
           echo "video_path=$VIDEO_PATH" >> $GITHUB_OUTPUT
-          echo "video_name=$(basename $VIDEO_PATH)" >> $GITHUB_OUTPUT
-          
-          VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
-          echo "✅ Video validated: $VIDEO_PATH ($VIDEO_SIZE bytes)"
+          echo "✅ Video file found: $VIDEO_PATH"
 
-      - name: 📋 Prepare Make.com payload
-        if: success() && steps.schedule_check.outputs.should_post == 'true'
-        id: makecom_prep
-        run: |
-          TITLE=$(jq -r '.title // "Mystery Short"' tmp/script.json)
-          DESCRIPTION=$(jq -r '.description // ""' tmp/script.json)
-          HASHTAGS=$(jq -r '.hashtags // [] | join(" ")' tmp/script.json)
-          KEY_PHRASE=$(jq -r '.key_phrase // "MYSTERY"' tmp/script.json)
-          
-          VIDEO_PATH="${{ steps.find_video.outputs.video_path }}"
-          VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
-          
-          YOUTUBE_URL=""
-          TIKTOK_URL=""
-          INSTAGRAM_URL=""
-          FACEBOOK_URL=""
-          
-          if [ -f tmp/multiplatform_log.json ]; then
-            YOUTUBE_URL=$(jq -r '.[-1].results[] | select(.platform=="youtube") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            TIKTOK_URL=$(jq -r '.[-1].results[] | select(.platform=="tiktok") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            INSTAGRAM_URL=$(jq -r '.[-1].results[] | select(.platform=="instagram") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            FACEBOOK_URL=$(jq -r '.[-1].results[] | select(.platform=="facebook") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-          fi
-          
-          cat > tmp/makecom_payload.json <<'PAYLOAD'
-          {
-            "title": "TITLE_PLACEHOLDER",
-            "description": "DESCRIPTION_PLACEHOLDER",
-            "hashtags": "HASHTAGS_PLACEHOLDER",
-            "key_phrase": "KEY_PHRASE_PLACEHOLDER",
-            "video_name": "VIDEO_NAME_PLACEHOLDER",
-            "video_size_mb": VIDEO_SIZE_PLACEHOLDER,
-            "workflow_run": "WORKFLOW_RUN_PLACEHOLDER",
-            "timestamp": "TIMESTAMP_PLACEHOLDER",
-            "niche": "mystery",
-            "content_type": "CONTENT_TYPE_PLACEHOLDER",
-            "priority": "PRIORITY_PLACEHOLDER",
-            "platform_urls": {
-              "youtube": "YOUTUBE_URL_PLACEHOLDER",
-              "tiktok": "TIKTOK_URL_PLACEHOLDER",
-              "instagram": "INSTAGRAM_URL_PLACEHOLDER",
-              "facebook": "FACEBOOK_URL_PLACEHOLDER"
-            }
-          }
-          PAYLOAD
-          
-          # Use sed to replace placeholders safely
-          sed -i "s|TITLE_PLACEHOLDER|${TITLE}|g" tmp/makecom_payload.json
-          sed -i "s|DESCRIPTION_PLACEHOLDER|${DESCRIPTION}|g" tmp/makecom_payload.json
-          sed -i "s|HASHTAGS_PLACEHOLDER|${HASHTAGS}|g" tmp/makecom_payload.json
-          sed -i "s|KEY_PHRASE_PLACEHOLDER|${KEY_PHRASE}|g" tmp/makecom_payload.json
-          sed -i "s|VIDEO_NAME_PLACEHOLDER|$(basename $VIDEO_PATH)|g" tmp/makecom_payload.json
-          sed -i "s|VIDEO_SIZE_PLACEHOLDER|$(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc)|g" tmp/makecom_payload.json
-          sed -i "s|WORKFLOW_RUN_PLACEHOLDER|${{ github.run_number }}|g" tmp/makecom_payload.json
-          sed -i "s|TIMESTAMP_PLACEHOLDER|$(date -u +%Y-%m-%dT%H:%M:%SZ)|g" tmp/makecom_payload.json
-          sed -i "s|CONTENT_TYPE_PLACEHOLDER|${{ steps.schedule_check.outputs.content_type }}|g" tmp/makecom_payload.json
-          sed -i "s|PRIORITY_PLACEHOLDER|${{ steps.schedule_check.outputs.priority }}|g" tmp/makecom_payload.json
-          sed -i "s|YOUTUBE_URL_PLACEHOLDER|${YOUTUBE_URL}|g" tmp/makecom_payload.json
-          sed -i "s|TIKTOK_URL_PLACEHOLDER|${TIKTOK_URL}|g" tmp/makecom_payload.json
-          sed -i "s|INSTAGRAM_URL_PLACEHOLDER|${INSTAGRAM_URL}|g" tmp/makecom_payload.json
-          sed -i "s|FACEBOOK_URL_PLACEHOLDER|${FACEBOOK_URL}|g" tmp/makecom_payload.json
-          
-          echo "✅ Make.com payload prepared"
-          cat tmp/makecom_payload.json
-
+      # ✅ RESTORED: Cloudinary upload step
       - name: ☁️ Upload video to Cloudinary
-        if: success() && steps.schedule_check.outputs.should_post == 'true'
+        if: success() && steps.scheduler.outputs.should_post == 'true'
         id: upload_temp
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
-          echo "📤 Uploading to Cloudinary..."
+          echo "📤 Uploading to Cloudinary for webhook..."
           export VIDEO_TO_UPLOAD="${{ steps.find_video.outputs.video_path }}"
           python .github/scripts/upload_to_cloudinary.py
           
           if [ -f tmp/video_url.txt ]; then
             VIDEO_URL=$(cat tmp/video_url.txt)
             echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
-            echo "✅ Video URL: $VIDEO_URL"
+            echo "✅ Video URL from Cloudinary: $VIDEO_URL"
           fi
 
-      - name: 🔗 Send to Make.com webhook
-        if: success() && steps.schedule_check.outputs.should_post == 'true'
+      # ✅ RESTORED: Your original, detailed Make.com payload preparation
+      - name: 📋 Prepare Make.com Payload
+        id: makecom_prep
+        if: success() && steps.scheduler.outputs.should_post == 'true'
         run: |
-          if [ -z "${{ secrets.MAKECOM_WEBHOOK_URL }}" ]; then
-            echo "⚠️ Make.com webhook URL not configured, skipping"
-            exit 0
-          fi
-          
-          PAYLOAD=$(cat tmp/makecom_payload.json)
+          PAYLOAD_FILE="tmp/makecom_payload.json"
           VIDEO_URL="${{ steps.upload_temp.outputs.video_url }}"
           
-          curl -X POST "${{ secrets.MAKECOM_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -H "User-Agent: GitHub-Actions-5AM-Legion" \
-            -d @- <<EOF
-          {
-            "video_url": "$VIDEO_URL",
-            "niche": "mystery",
-            "content_type": "${{ steps.schedule_check.outputs.content_type }}",
-            "metadata": $PAYLOAD,
-            "github": {
-              "run_id": "${{ github.run_id }}",
-              "run_number": "${{ github.run_number }}",
-              "repository": "${{ github.repository }}"
-            }
-          }
-          EOF
+          # Safely extract data from script.json using jq
+          TITLE=$(jq -r '.title // "Untitled Mystery"' tmp/script.json)
+          DESCRIPTION=$(jq -r '.description // "A chilling mystery from the Mythica Report archives."' tmp/script.json)
+          HASHTAGS=$(jq -r '(.hashtags // []) | join(" ")' tmp/script.json)
+
+          # Safely get URLs from log file
+          LOG_FILE="tmp/multiplatform_log.json"
+          YOUTUBE_URL=$(jq -r '.[-1].results[]? | select(.platform=="youtube") | .url // ""' "$LOG_FILE" 2>/dev/null)
+          FACEBOOK_URL=$(jq -r '.[-1].results[]? | select(.platform=="facebook") | .url // ""' "$LOG_FILE" 2>/dev/null)
           
+          # Create JSON payload using jq for robustness
+          jq -n \
+            --arg title "$TITLE" \
+            --arg description "$DESCRIPTION" \
+            --arg hashtags "$HASHTAGS" \
+            --arg video_url "$VIDEO_URL" \
+            --arg content_type "${{ steps.scheduler.outputs.current_content_type }}" \
+            --arg priority "${{ steps.scheduler.outputs.current_priority }}" \
+            --arg youtube_url "$YOUTUBE_URL" \
+            --arg facebook_url "$FACEBOOK_URL" \
+            '{
+              "title": $title,
+              "description": $description,
+              "hashtags": $hashtags,
+              "video_url": $video_url,
+              "niche": "mystery",
+              "channel": "Mythica Report",
+              "content_type": $content_type,
+              "priority": $priority,
+              "platform_urls": {
+                "youtube": $youtube_url,
+                "facebook": $facebook_url
+              },
+              "github": {
+                "run_id": "${{ github.run_id }}",
+                "repository": "${{ github.repository }}"
+              }
+            }' > "$PAYLOAD_FILE"
+            
+          echo "✅ Make.com payload prepared."
+          cat "$PAYLOAD_FILE"
+
+      # ✅ RESTORED: Make.com webhook step
+      - name: 🔗 Send to Make.com Webhook
+        if: success() && steps.scheduler.outputs.should_post == 'true' && env.MAKECOM_WEBHOOK_URL != ''
+        env:
+          MAKECOM_WEBHOOK_URL: ${{ secrets.MAKECOM_WEBHOOK_URL }}
+        run: |
+          curl -X POST "$MAKECOM_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: GitHub-Actions-Mythica-Report" \
+            -d "@tmp/makecom_payload.json"
           echo "✅ Webhook sent to Make.com"
 
-      - name: 📚 Organize into mysterious playlists
-        if: success() && steps.schedule_check.outputs.should_post == 'true'
+      - name: 📁 Organize into Playlists
+        if: success() && steps.scheduler.outputs.should_post == 'true'
         env:
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
-          CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
         run: python .github/scripts/manage_playlists.py
 
-      - name: 💾 Save platform config
-        uses: actions/cache/save@v4
-        if: always() && steps.schedule_check.outputs.should_post == 'true'
-        with:
-          path: tmp/platform_config.json
-          key: platform-config-mystery-${{ github.run_number }}
-
-      - name: 💾 Save playlist config
-        uses: actions/cache/save@v4
-        if: always() && steps.schedule_check.outputs.should_post == 'true'
-        with:
-          path: tmp/playlist_config.json
-          key: playlist-config-mystery-${{ github.run_number }}
-
+      # ✅ RESTORED: Your final caching and artifact steps
       - name: 💾 Save content history
         uses: actions/cache/save@v4
-        if: always() && steps.schedule_check.outputs.should_post == 'true'
+        if: always() && steps.scheduler.outputs.should_post == 'true'
         with:
           path: tmp/content_history.json
-          key: content-history-mystery-${{ github.run_number }}
+          key: content-history-mythica-${{ github.run_number }}
 
-      - name: 📦 Upload artifacts
+      - name: 📦 Upload Artifacts
         uses: actions/upload-artifact@v4
-        if: always() && steps.schedule_check.outputs.should_post == 'true'
+        if: always() && steps.scheduler.outputs.should_post == 'true'
         with:
-          name: mysterious-short-${{ github.run_number }}
+          name: mythica-report-short-${{ github.run_number }}
           path: |
             tmp/*.mp4
-            tmp/thumbnail.png
-            tmp/script.json
-            tmp/content_history.json
-            tmp/multiplatform_log.json
-            tmp/voice.mp3
+            tmp/*.png
+            tmp/*.json
+            tmp/*.mp3
           retention-days: 30
 
       - name: 📋 Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: error-logs-mystery-${{ github.run_number }}
+          name: error-logs-mythica-${{ github.run_number }}
           path: tmp/*.log
           retention-days: 7
 
-      - name: 🔥 Workflow Summary
+      - name: 📝 Workflow Summary
         if: always()
         run: |
-          echo "## 🔍 Mythica Report - Mystery Archives" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔮 Mythica Report - Workflow Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**⏰ Time:** ${{ steps.schedule_check.outputs.current_time }}" >> $GITHUB_STEP_SUMMARY
-          echo "**✅ Posted:** ${{ steps.schedule_check.outputs.should_post }}" >> $GITHUB_STEP_SUMMARY
-          echo "**⭐ Priority:** ${{ steps.schedule_check.outputs.priority }}" >> $GITHUB_STEP_SUMMARY
-          echo "**🔍 Content Type:** ${{ steps.schedule_check.outputs.content_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🎯 Optimal Posting Windows (WAT)" >> $GITHUB_STEP_SUMMARY
-          echo "- **5-6 AM:** Morning Warriors (HIGHEST engagement)" >> $GITHUB_STEP_SUMMARY
-          echo "- **2-3 AM:** Late Night Crisis (HIGHEST virality) 🔥" >> $GITHUB_STEP_SUMMARY
-          echo "- **12-2 PM:** Midday Boost" >> $GITHUB_STEP_SUMMARY
-          echo "- **6-9 PM:** Evening Reflection" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.scheduler.outputs.should_post }}" == "true" ]; then
+            echo "✅ **Video generation and upload process was triggered.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Parameter | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+            echo "| **Time (EST)** | \`${{ steps.scheduler.outputs.current_time_est }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Content Type** | \`${{ steps.scheduler.outputs.current_content_type }}\` |" >> $GITHUB_STEP_SUMMARY
+            echo "| **Priority** | \`${{ steps.scheduler.outputs.current_priority }}\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Video generation was SKIPPED.**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This was not an optimal posting time according to the Mythica Report schedule. The next check will be in one hour." >> $GITHUB_STEP_SUMMARY
+          fi

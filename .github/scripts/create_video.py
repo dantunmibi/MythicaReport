@@ -1159,18 +1159,24 @@ else:
 if video.audio is None:
     raise Exception("Audio attachment failed!")
 
-print(f"\n📹 Writing mystery video...")
+# --- [ ✅ FIXED & OPTIMIZED CODE ] ---
+print(f"\n📹 Writing final video for web compatibility...")
 try:
+    # Explicitly set ffmpeg_params for maximum compatibility and smaller file size.
     video.write_videofile(
         OUT,
         fps=30,
-        codec="libx264",
-        audio_codec="aac",
+        codec="libx264",          # The standard for H.264 video
+        audio_codec="aac",        # The standard for MP4 audio
+        audio_bitrate="192k",     # Good quality for voice
+        preset="veryfast",        # MUCH faster for CI/CD environments, minimal quality loss
         threads=4,
-        preset='medium',
-        audio_bitrate='192k',
-        bitrate='8000k',
-        logger=None
+        # CRITICAL FIXES HERE:
+        bitrate="2000k",          # Drastically reduce bitrate for static images (was 8000k)
+        ffmpeg_params=[
+            '-pix_fmt', 'yuv420p'  # THE MOST IMPORTANT FIX for player compatibility
+        ]
+        # REMOVED: logger=None to allow for better debug output on GitHub Actions
     )
 
     final_time = scene_starts[-1] + paragraph_durations[-1] if scene_starts else duration
