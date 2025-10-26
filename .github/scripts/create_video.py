@@ -1025,49 +1025,59 @@ speech_duration = max(0.1, duration - lead_silence - trail_silence)
 print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_duration:.3f}s")
 
 # ✅ FIXED: Simplified and robust timing calculation
+# Replace the timing calculation section (around line 1130-1180) with:
+
 timing_data = load_audio_timing()
 paragraph_durations = []
 scene_starts = []
 
+# Check if timing data is valid and has enough sections
+timing_valid = False
 if timing_data and timing_data.get('optimized'):
     sections = timing_data.get('sections', [])
     
-    # Check if we have complete timing data
-    has_complete_timing = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
-    
-    if has_complete_timing:
-        print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
-        for i, paragraph in enumerate(paragraphs):
-            if i < len(sections):
+    # We need at least as many sections as paragraphs for valid timing
+    if len(sections) >= len(paragraphs):
+        # Check if all needed sections have proper timing info
+        has_complete_timing = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
+        if has_complete_timing:
+            timing_valid = True
+            print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
+            for i, paragraph in enumerate(paragraphs):
                 scene_starts.append(sections[i]['start'] + start_offset)
                 paragraph_durations.append(sections[i]['duration'])
                 print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={paragraph_durations[-1]:.2f}s")
-    else:
-        print("\n⚠️ Incomplete timing metadata, using proportional distribution...")
-        timing_data = None
+    
+    # If we have fewer sections than paragraphs, invalidate timing
+    if len(sections) < len(paragraphs):
+        print(f"\n⚠️ Timing mismatch: {len(sections)} sections but {len(paragraphs)} paragraphs")
+        print("   Falling back to proportional distribution...")
+        timing_valid = False
 
-# Fallback to proportional timing
-if not scene_starts:
+# Fallback to proportional timing if no valid timing data
+if not timing_valid:
     print("\n📊 Using proportional timing based on word count...")
     total_words = sum(len(p.split()) for p in paragraphs if p)
     current_time = start_offset
     
-    for paragraph in paragraphs:
+    for i, paragraph in enumerate(paragraphs):
         scene_starts.append(current_time)
         
         if total_words > 0:
             word_count = len(paragraph.split())
+            # Calculate proportional duration with minimum time
             dur = (word_count / total_words) * speech_duration
+            # Ensure minimum duration for readability
+            dur = max(2.0, dur)
         else:
             dur = speech_duration / max(1, len(paragraphs))
         
-        dur = max(2.0, dur)  # Minimum 2 seconds per paragraph
         paragraph_durations.append(dur)
         current_time += dur
         
-        print(f"   Paragraph {len(scene_starts)}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
+        print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
 
-# ✅ FIXED: Normalize to fit speech window exactly
+# Normalize to fit speech window exactly
 total_calculated = sum(paragraph_durations)
 if total_calculated > 0 and abs(total_calculated - speech_duration) > 0.5:
     scale_factor = speech_duration / total_calculated
@@ -1081,7 +1091,6 @@ if total_calculated > 0 and abs(total_calculated - speech_duration) > 0.5:
         current_time += dur
     
     print(f"   ✅ Normalized timings by factor {scale_factor:.3f}")
-
 # --- Video Composition with Enhanced Text ---
 
 clips = []
@@ -1159,7 +1168,6 @@ try:
         audio_codec="aac",
         threads=4,
         preset='medium',
-        audio_fps=48000,
         audio_bitrate='192k',
         bitrate='8000k',
         logger=None

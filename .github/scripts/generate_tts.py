@@ -9,6 +9,7 @@ Features:
 - Natural pauses for dramatic reveals
 - Clear articulation for complex narratives
 - Optimized for 60-90 second mystery stories
+- FIXED: Proper paragraph timing synchronization
 """
 
 import os
@@ -120,8 +121,7 @@ def build_tts_text_for_mystery(script_data):
     """
     Build TTS text for mystery narrative
     
-    SIMPLIFIED: Just read the 'script' field directly!
-    Mystery scripts are already complete narratives (not bullets)
+    ✅ FIXED: Ensure paragraph splitting matches video creation script exactly
     """
     
     content_type = script_data.get('content_type', 'general')
@@ -129,63 +129,97 @@ def build_tts_text_for_mystery(script_data):
     
     print(f"🔍 Building TTS for {content_type} mystery ({mystery_category})")
     
-    # ✅ MYSTERY VERSION: Script is already a complete narrative!
+    # Get the script text
     full_script = script_data.get('script', '')
     
     if not full_script:
         print("⚠️ No script field found, trying fallback...")
-        # Fallback if somehow we got old format
         hook = script_data.get('hook', '')
         bullets = script_data.get('bullets', [])
         cta = script_data.get('cta', '')
         full_script = f"{hook}\n\n{' '.join(bullets)}\n\n{cta}"
     
-    # ✅ CLEAN TEXT FOR TTS - Remove special characters
+    # Clean text for TTS - Remove special characters
     full_script_clean = clean_text_for_tts(full_script)
     
     # Show what was cleaned
     if full_script != full_script_clean:
         print("🧹 Text cleaned for TTS (removed special characters)")
-        # Show example of what was removed
         removed_chars = set(re.findall(r'[*_~`^#\[\]\{\}|\\]', full_script))
         if removed_chars:
             print(f"   Removed characters: {', '.join(removed_chars)}")
     
-    # The script already has proper paragraph breaks (\n\n)
-    # TTS will naturally pause at periods and paragraph breaks
-    
-    # Count sections for timing (based on paragraph breaks)
+    # ✅ CRITICAL FIX: Match the exact paragraph splitting logic from create_video.py
+    # Split by double newline first
     paragraphs = [p.strip() for p in full_script_clean.split('\n\n') if p.strip()]
+    
+    # If we get too few paragraphs, try more aggressive splitting
+    if len(paragraphs) <= 2:
+        print(f"⚠️ Only {len(paragraphs)} paragraphs detected, attempting better split...")
+        
+        # Try splitting by single newline if they're substantial
+        alt_paragraphs = [p.strip() for p in full_script_clean.split('\n') if p.strip() and len(p) > 50]
+        
+        if len(alt_paragraphs) > len(paragraphs):
+            paragraphs = alt_paragraphs
+            print(f"   ✅ Found {len(paragraphs)} paragraphs using single newline split")
+        else:
+            # Try splitting by sentences into logical chunks
+            sentences = re.split(r'(?<=[.!?])\s+', full_script_clean)
+            
+            # Group sentences into paragraphs of roughly equal size
+            if len(sentences) >= 4:
+                target_para_count = min(6, max(4, len(sentences) // 3))
+                sentences_per_para = len(sentences) // target_para_count
+                
+                paragraphs = []
+                for i in range(0, len(sentences), sentences_per_para):
+                    para = ' '.join(sentences[i:i+sentences_per_para])
+                    if para.strip():
+                        paragraphs.append(para.strip())
+                
+                print(f"   ✅ Created {len(paragraphs)} paragraphs from {len(sentences)} sentences")
+    
+    # Ensure we have at least 3 paragraphs for proper video structure
+    if len(paragraphs) < 3 and len(full_script_clean) > 200:
+        print("⚠️ Still too few paragraphs, forcing split...")
+        words = full_script_clean.split()
+        words_per_para = len(words) // 4  # Target 4 paragraphs
+        
+        paragraphs = []
+        for i in range(0, len(words), words_per_para):
+            para = ' '.join(words[i:i+words_per_para])
+            if para.strip():
+                paragraphs.append(para.strip())
+        
+        print(f"   ✅ Force-created {len(paragraphs)} paragraphs")
     
     print(f"📝 Mystery Narrative Structure:")
     print(f"   Total paragraphs: {len(paragraphs)}")
     print(f"   Total words: {len(full_script_clean.split())}")
     
     # Preview each section
-    for i, para in enumerate(paragraphs[:4], 1):
+    for i, para in enumerate(paragraphs[:8], 1):
         preview = para[:60] + "..." if len(para) > 60 else para
-        print(f"   Section {i}: {preview}")
+        word_count = len(para.split())
+        print(f"   Section {i}: {word_count} words - {preview}")
     
     # Calculate expected duration
     word_count = len(full_script_clean.split())
     
     # Mystery pacing: slower for suspense
     base_wpm = {
-        'evening_prime': 140,      # Standard documentary pace
-        'late_night': 130,         # Slower for darker content
-        'weekend_binge': 145,      # Slightly faster for complex
-        'general': 140             # Default documentary
+        'evening_prime': 140,
+        'late_night': 130,
+        'weekend_binge': 145,
+        'general': 140
     }
     
     wpm = base_wpm.get(content_type, 140)
     
-    # Natural pauses from paragraph breaks (estimate 0.8s per break)
+    # Natural pauses from paragraph breaks
     pause_time = (len(paragraphs) - 1) * 0.8
-    
-    # Word reading time
     word_time = (word_count / wpm) * 60
-    
-    # Total estimated duration
     estimated_duration = word_time + pause_time
     
     print(f"\n⏱️ Duration Estimate:")
@@ -194,7 +228,6 @@ def build_tts_text_for_mystery(script_data):
     print(f"   Paragraph pauses: {pause_time:.1f}s")
     print(f"   Estimated total: {estimated_duration:.1f}s")
     
-    # Verify it's in 60-90 second range
     if estimated_duration < 55:
         print(f"   ⚠️ Script may be too short (under 60s)")
     elif estimated_duration > 95:
@@ -424,7 +457,7 @@ def generate_audio_with_fallback(full_text, output_path):
 def optimize_audio_timing(audio_path, expected_duration, paragraphs):
     """
     Optimize audio timing for perfect sync with video
-    Based on paragraph structure (mystery narratives)
+    ✅ FIXED: Ensure we create timing for ALL paragraphs
     """
     
     try:
@@ -443,43 +476,88 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
         print(f"   Expected: {expected_duration:.2f}s")
         print(f"   Actual: {actual_duration:.2f}s")
         print(f"   Difference: {abs(actual_duration - expected_duration):.2f}s")
+        print(f"   Paragraphs to time: {len(paragraphs)}")
         
-        # Calculate section timings based on word count distribution
-        total_words = sum(len(p.split()) for p in paragraphs)
+        # ✅ CRITICAL: Ensure we have paragraphs
+        if not paragraphs or len(paragraphs) == 0:
+            print("❌ No paragraphs provided for timing!")
+            # Create a single section for the whole audio
+            section_timings = [{
+                'name': 'full_script',
+                'text_preview': 'Full script',
+                'start': 0.0,
+                'duration': actual_duration,
+                'end': actual_duration,
+                'words': 0
+            }]
+        else:
+            # Calculate section timings based on word count distribution
+            total_words = sum(len(p.split()) for p in paragraphs)
+            
+            if total_words == 0:
+                print("⚠️ No words found in paragraphs!")
+                total_words = 1
+            
+            current_time = 0.0
+            section_timings = []
+            
+            for i, paragraph in enumerate(paragraphs):
+                para_words = len(paragraph.split())
+                
+                # Proportional duration based on word count
+                if total_words > 0:
+                    word_duration = (para_words / total_words) * actual_duration
+                else:
+                    word_duration = actual_duration / len(paragraphs)
+                
+                # Ensure minimum duration for readability
+                section_duration = max(1.0, word_duration)
+                
+                section_timings.append({
+                    'name': f'paragraph_{i+1}',
+                    'text_preview': paragraph[:60] + "..." if len(paragraph) > 60 else paragraph,
+                    'start': current_time,
+                    'duration': section_duration,
+                    'end': current_time + section_duration,
+                    'words': para_words
+                })
+                
+                current_time += section_duration
+            
+            # ✅ NORMALIZE to match actual duration exactly
+            if section_timings:
+                total_timed = sum(s['duration'] for s in section_timings)
+                if total_timed > 0 and abs(total_timed - actual_duration) > 0.1:
+                    scale = actual_duration / total_timed
+                    current_time = 0.0
+                    for timing in section_timings:
+                        timing['duration'] *= scale
+                        timing['start'] = current_time
+                        timing['end'] = current_time + timing['duration']
+                        current_time = timing['end']
         
-        current_time = 0.0
-        section_timings = []
+        print(f"\n📊 Optimized Section Timings ({len(section_timings)} sections):")
+        for i, timing in enumerate(section_timings):
+            if i < 5 or i >= len(section_timings) - 1:  # Show first 5 and last
+                print(f"   {timing['name']}: {timing['start']:.2f}s - {timing['end']:.2f}s "
+                      f"({timing['words']} words, {timing['duration']:.2f}s duration)")
+                preview = timing['text_preview'][:80] if 'text_preview' in timing else ''
+                if preview:
+                    print(f"      Preview: {preview}")
         
-        for i, paragraph in enumerate(paragraphs):
-            para_words = len(paragraph.split())
-            
-            # Proportional duration based on word count
-            word_duration = (para_words / total_words) * actual_duration if total_words > 0 else actual_duration / len(paragraphs)
-            
-            # Natural pause after paragraph (except last)
-            pause_duration = 0.8 if i < len(paragraphs) - 1 else 0.0
-            
-            section_duration = word_duration
-            
-            section_timings.append({
-                'name': f'paragraph_{i+1}',
-                'text_preview': paragraph[:60] + "..." if len(paragraph) > 60 else paragraph,
-                'start': current_time,
-                'duration': section_duration,
-                'end': current_time + section_duration,
-                'words': para_words
-            })
-            
-            current_time += section_duration
+        if len(section_timings) > 6:
+            print(f"   ... ({len(section_timings) - 6} more sections)")
         
-        print(f"\n📊 Optimized Section Timings:")
-        for timing in section_timings[:5]:  # Show first 5
-            print(f"   {timing['name']}: {timing['start']:.2f}s - {timing['end']:.2f}s "
-                  f"({timing['words']} words)")
-            print(f"      Preview: {timing['text_preview']}")
-        
-        if len(section_timings) > 5:
-            print(f"   ... and {len(section_timings) - 5} more sections")
+        # ✅ VALIDATE before saving
+        if len(section_timings) == 0:
+            print("❌ No timing sections created! Creating fallback...")
+            section_timings = [{
+                'name': 'full_script',
+                'start': 0.0,
+                'duration': actual_duration,
+                'end': actual_duration,
+                'words': total_words if 'total_words' in locals() else 0
+            }]
         
         # Save timing metadata
         timing_path = os.path.join(TMP, "audio_timing.json")
@@ -488,18 +566,36 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
                 'total_duration': actual_duration,
                 'sections': section_timings,
                 'paragraph_count': len(paragraphs),
+                'section_count': len(section_timings),
                 'optimized': True,
                 'niche': 'mystery'
             }, f, indent=2)
         
         print(f"\n✅ Timing optimization complete")
+        print(f"   Sections created: {len(section_timings)}")
+        print(f"   Total duration: {actual_duration:.2f}s")
         print(f"   Saved to: {timing_path}")
         
         return section_timings
         
     except Exception as e:
         print(f"⚠️ Timing optimization failed: {e}")
-        return None
+        import traceback
+        traceback.print_exc()
+        
+        # Return fallback timing
+        if 'actual_duration' in locals():
+            duration = actual_duration
+        else:
+            duration = expected_duration
+            
+        return [{
+            'name': 'full_script',
+            'start': 0.0,
+            'duration': duration,
+            'end': duration,
+            'words': len(' '.join(paragraphs).split()) if paragraphs else 0
+        }]
 
 
 def save_metadata(audio_path, script_data, full_text, estimated_duration):
@@ -576,7 +672,7 @@ def main():
     print(f"🎯 Content Type: {script_data.get('content_type', 'general')}")
     print(f"🎭 Category: {script_data.get('mystery_category', 'unknown')}")
     
-    # Build TTS text (SIMPLIFIED - just read script field!)
+    # Build TTS text with proper paragraph splitting
     full_text, paragraphs, estimated_duration = build_tts_text_for_mystery(script_data)
     
     print(f"\n🎙️ Preparing narrator for {len(full_text)} character script")
@@ -592,7 +688,7 @@ def main():
         print("\n❌ All TTS methods failed!")
         exit(1)
     
-    # Optimize timing for video sync
+    # ✅ CRITICAL: Pass paragraphs for proper timing
     section_timings = optimize_audio_timing(output_path, estimated_duration, paragraphs)
     
     # Save metadata
@@ -602,6 +698,7 @@ def main():
     print("✅ MYSTERY VOICEOVER GENERATION COMPLETE!")
     print("="*70)
     print(f"Output: {output_path}")
+    print(f"Sections: {len(section_timings)}")
     print(f"Style: Documentary narrator, mysterious, deliberate")
     print(f"Ready for film noir video creation 🔍")
 
