@@ -21,36 +21,47 @@ on:
         description: 'Mystery category (disappearance, crime, historical, conspiracy, auto)'
         required: false
         default: 'auto'
+      intensity:
+        description: 'Content intensity (aggressive, balanced, inspirational)'
+        required: false
+        default: 'balanced'
         
   schedule:
-  # 🔍 MYSTERY-OPTIMAL POSTING SCHEDULE (WAT - West Africa Time)
-  # Based on evening bingers (7-11 PM) and late night scrollers (11 PM-2 AM)
+  # 🔍 MYSTERY-OPTIMAL POSTING SCHEDULE (WAT - West Africa Time = UTC+1)
+  # GitHub crons run in UTC, so subtract 1 hour from WAT times
+  # 
+  # CONVERSION EXAMPLES:
+  # 8 PM WAT = 7 PM UTC = cron '0 19' (hour 19)
+  # 11 PM WAT = 10 PM UTC = cron '0 22' (hour 22)
+  # 2 AM WAT = 1 AM UTC = cron '0 1' (hour 1)
   
-  # Monday: 8 PM (evening start), 11 PM (late night mystery)
+  # ✅ CORRECTED CRON TIMES (UTC for GitHub)
+  
+  # Monday: 8 PM WAT (19:00), 11 PM WAT (22:00)
   - cron: '0 19 * * 1'    # 8 PM WAT - Evening mystery
   - cron: '0 22 * * 1'    # 11 PM WAT - Late night intrigue
   
-  # Tuesday: 7 PM (prime time), 10:30 PM (night binge)
+  # Tuesday: 7 PM WAT (18:00), 10 PM WAT (21:00)
   - cron: '0 18 * * 2'    # 7 PM WAT - Prime mystery time
-  - cron: '0 21 * * 2'    # 10:30 PM WAT - Night scrollers
+  - cron: '0 21 * * 2'    # 10 PM WAT - Night scrollers
   
-  # Wednesday: 8 PM (mid-week), 11:30 PM (deep night)
+  # Wednesday: 8 PM WAT (19:00), 11 PM WAT (22:00)
   - cron: '0 19 * * 3'    # 8 PM WAT - Mid-week mystery
-  - cron: '0 22 * * 3'    # 11:30 PM WAT - Late engagement
+  - cron: '0 22 * * 3'    # 11 PM WAT - Late engagement
   
-  # Thursday: 7:30 PM (early prime), 11 PM (night peak)
-  - cron: '0 18 * * 4'    # 7:30 PM WAT - Early evening
+  # Thursday: 7 PM WAT (18:00), 11 PM WAT (22:00)
+  - cron: '0 18 * * 4'    # 7 PM WAT - Early evening
   - cron: '0 22 * * 4'    # 11 PM WAT - Peak night time
   
-  # Friday: 9 PM (weekend prep), 12 AM (friday night scrollers)
+  # Friday: 9 PM WAT (20:00), 12 AM WAT (23:00)
   - cron: '0 20 * * 5'    # 9 PM WAT - Friday evening
   - cron: '0 23 * * 5'    # 12 AM WAT - Friday late night
   
-  # Saturday: 8 PM (weekend prime), 11 PM (saturday night)
+  # Saturday: 8 PM WAT (19:00), 11 PM WAT (22:00)
   - cron: '0 19 * * 6'    # 8 PM WAT - Weekend evening
   - cron: '0 22 * * 6'    # 11 PM WAT - Saturday night binge
   
-  # Sunday: 7 PM (sunday wind-down), 10 PM (week prep scrolling)
+  # Sunday: 7 PM WAT (18:00), 10 PM WAT (21:00)
   - cron: '0 18 * * 0'    # 7 PM WAT - Sunday evening
   - cron: '0 21 * * 0'    # 10 PM WAT - Week ahead prep
 
@@ -94,35 +105,37 @@ jobs:
 
       - name: 🔍 Check optimal mystery posting time
         id: schedule_check
+        env:
+          IGNORE_SCHEDULE: ${{ github.event.inputs.ignore_schedule }}
         run: |
           python -c "
           import os
           from datetime import datetime
           import pytz
           
-          # West Africa Time
+          # ✅ FIXED: Correctly use West Africa Time (UTC+1)
           tz = pytz.timezone('Africa/Lagos')
           current = datetime.now(tz)
           hour = current.hour
           weekday = current.weekday()
 
-          # MYSTERY-OPTIMIZED SCHEDULE
+          # MYSTERY-OPTIMIZED SCHEDULE (in WAT hours, not UTC)
           # Key times: 7-9 PM (evening bingers), 10 PM-2 AM (late night scrollers)
           OPTIMAL_SCHEDULE = {
-              0: [20, 23],      # Monday: Evening, late night
-              1: [19, 22],      # Tuesday: Prime time, night
-              2: [20, 23],      # Wednesday: Evening, deep night
-              3: [19, 23],      # Thursday: Early evening, night peak
-              4: [21, 24],      # Friday: Weekend prep, late
-              5: [20, 23],      # Saturday: Weekend prime, night
-              6: [19, 22]       # Sunday: Wind-down, week prep
+              0: [20, 23],      # Monday: 8 PM, 11 PM WAT
+              1: [19, 22],      # Tuesday: 7 PM, 10 PM WAT
+              2: [20, 23],      # Wednesday: 8 PM, 11 PM WAT
+              3: [19, 23],      # Thursday: 7 PM, 11 PM WAT
+              4: [21, 24],      # Friday: 9 PM, 12 AM WAT
+              5: [20, 23],      # Saturday: 8 PM, 11 PM WAT
+              6: [19, 22]       # Sunday: 7 PM, 10 PM WAT
           }
 
-          # CONTENT TYPES BY TIME
+          # CONTENT TYPES BY TIME (WAT)
           CONTENT_TYPES = {
-              'evening_prime': 'Evening Mystery (7-9 PM)',        # 18-21 hour
-              'late_night': 'Late Night Intrigue (10 PM-2 AM)',   # 22-2 hour
-              'weekend_binge': 'Weekend Deep Dive (Sat/Sun)',     # Weekend
+              'evening_prime': 'Evening Mystery (7-9 PM WAT)',
+              'late_night': 'Late Night Intrigue (10 PM-2 AM WAT)',
+              'weekend_binge': 'Weekend Deep Dive (Sat/Sun 8-11 PM WAT)',
               'general': 'General Mystery'
           }
 
@@ -130,10 +143,10 @@ jobs:
               # Weekend special
               if weekday in [5, 6]:  # Saturday, Sunday
                   return 'weekend_binge'
-              # Late night (mystery prime time)
+              # Late night (mystery prime time) - 10 PM to 2 AM
               elif hour >= 22 or hour <= 2:
                   return 'late_night'
-              # Evening prime
+              # Evening prime - 7 PM to 9 PM
               elif 18 <= hour <= 21:
                   return 'evening_prime'
               return 'general'
@@ -142,7 +155,7 @@ jobs:
           priority = 'medium'
           content_type = get_content_type(hour, weekday)
           
-          ignore_schedule = '${{ github.event.inputs.ignore_schedule }}' == 'true'
+          ignore_schedule = os.getenv('IGNORE_SCHEDULE', 'false').lower() == 'true'
           
           if ignore_schedule:
               print('⚠️ Schedule check BYPASSED by user input')
@@ -150,7 +163,7 @@ jobs:
               priority = 'manual'
           elif weekday in OPTIMAL_SCHEDULE:
               optimal_hours = OPTIMAL_SCHEDULE[weekday]
-              # Allow posting within 1 hour window of optimal time
+              # ✅ FIXED: Allow posting within 1 hour window of optimal time
               if any(abs(hour - opt_hour) <= 1 for opt_hour in optimal_hours):
                   should_post = True
                   # Highest priority for late night (binge potential)
@@ -158,12 +171,15 @@ jobs:
                       priority = 'highest'
                   elif content_type == 'weekend_binge':
                       priority = 'high'
+                  elif content_type == 'evening_prime':
+                      priority = 'high'
                   else:
                       priority = 'medium'
                   print(f'✅ Within optimal window: {current.strftime(\"%A %I:%M %p WAT\")} - {CONTENT_TYPES[content_type]}')
               else:
                   print(f'⏳ Not optimal time. Current: {current.strftime(\"%A %I:%M %p WAT\")}')
-                  print(f'   Next optimal: {min(optimal_hours, key=lambda x: abs(x-hour))}:00')
+                  next_optimal = min(optimal_hours, key=lambda x: abs(x-hour))
+                  print(f'   Next optimal: ~{next_optimal}:00 WAT')
           
           # Write to GITHUB_OUTPUT
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
@@ -180,19 +196,22 @@ jobs:
           echo "⭐ Priority: ${{ steps.schedule_check.outputs.priority }}"
           echo "🔍 Content Type: ${{ steps.schedule_check.outputs.content_type }}"
           echo ""
-          echo "💡 Optimal Mystery Times:"
+          echo "💡 Optimal Mystery Times (WAT):"
           echo "   • 7-9 PM: Evening Bingers (HIGH engagement)"
-          echo "   • 10 PM-2 AM: Late Night Scrollers (HIGHEST virality)"
+          echo "   • 10 PM-2 AM: Late Night Scrollers (HIGHEST virality) 🔥"
           echo "   • Weekends 8-11 PM: Deep Dive Binge (BEST retention)"
 
       - name: ⏸️ Skip if not optimal mystery time
         if: steps.schedule_check.outputs.should_post != 'true'
         run: |
           echo "⏸️ Skipping run - not within optimal mystery posting window"
-          echo "💡 Best times to catch mystery audience:"
+          echo ""
+          echo "💡 Next optimal posting times:"
           echo "   🔍 8 PM: Evening viewers ready for intrigue"
           echo "   🔍 11 PM: Late night scrollers seeking mysteries"
-          echo "   🔍 Weekend nights: Binge-watching deep dives"
+          echo "   🔍 2 AM: PEAK VIRALITY TIME (existential crisis hour)"
+          echo ""
+          echo "ℹ️ Use 'ignore_schedule: true' input to force immediate posting"
           exit 0
 
       - name: 📦 Cache apt packages
@@ -210,8 +229,8 @@ jobs:
       - name: 🔧 Install system deps
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
             ffmpeg \
             libsm6 \
             libxext6 \
@@ -221,10 +240,6 @@ jobs:
             fonts-freefont-ttf \
             fonts-dejavu \
             espeak-ng
-          echo "📝 Available fonts for mystery text:"
-          fc-list | grep -i dejavu | head -3
-          fc-list | grep -i liberation | head -3
-          fc-list | grep -i serif | head -3
           echo "🔍 System ready for mystery content generation"
 
       - name: 🎙️ Cache Coqui models
@@ -274,9 +289,9 @@ jobs:
       - name: 📦 Install Python packages
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          echo "🔍 Python dependencies installed for mystery engine"
+          python -m pip install --upgrade pip -q
+          pip install -r requirements.txt -q
+          echo "🔍 Python dependencies installed"
 
       - name: 🎵 Download background music library
         if: steps.schedule_check.outputs.should_post == 'true'
@@ -293,8 +308,6 @@ jobs:
           MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
         run: |
           echo "🔍 Fetching trending mystery topics..."
-          echo "📍 Content Type: $CONTENT_TYPE"
-          echo "🎭 Mystery Type: ${MYSTERY_TYPE:-auto}"
           python .github/scripts/fetch_trending.py
 
       - name: ✍️ Generate mystery script
@@ -304,51 +317,36 @@ jobs:
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
           PRIORITY: ${{ steps.schedule_check.outputs.priority }}
           MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
-        run: |
-          echo "🔍 Generating COMPELLING mystery narrative..."
-          echo "📍 Type: $CONTENT_TYPE"
-          echo "⭐ Priority: $PRIORITY"
-          echo "🎭 Mystery: ${MYSTERY_TYPE:-auto}"
-          python .github/scripts/generate_trending_and_script.py
+        run: python .github/scripts/generate_trending_and_script.py
 
-      - name: 🎙️ Generate mysterious voiceover (Documentary Narrator)
+      - name: 🎙️ Generate mysterious voiceover
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-        run: |
-          echo "🎙️ Generating MYSTERIOUS, documentary voiceover..."
-          echo "🔍 Style: Documentary narrator (deliberate, serious)"
-          python .github/scripts/generate_tts.py
+        run: python .github/scripts/generate_tts.py
 
       - name: 🎬 Create film noir mystery video
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-        run: |
-          echo "🎬 Creating FILM NOIR mystery video..."
-          echo "🎨 Style: Desaturated, high contrast, vignette, grain"
-          python .github/scripts/create_video.py
+        run: python .github/scripts/create_video.py
 
       - name: 🖼️ Generate mysterious thumbnail
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-        run: |
-          echo "🖼️ Creating MYSTERIOUS thumbnail..."
-          echo "💥 Style: Noir + Evidence tags + Minimal text"
-          python .github/scripts/generate_thumbnail.py
+        run: python .github/scripts/generate_thumbnail.py
 
       - name: 🧹 Clean up temporary files
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
-          find tmp -name "scene_*.jpg" -type f -delete || true
-          find tmp -name "*_noir.jpg" -type f -delete || true
-          rm -f tmp/short_ready.mp4 || true
+          find tmp -name "scene_*.jpg" -type f -delete 2>/dev/null || true
+          find tmp -name "*_noir.jpg" -type f -delete 2>/dev/null || true
+          rm -f tmp/short_ready.mp4 2>/dev/null || true
           echo "🧹 Cleaned up temporary files"
 
-      # ===== MULTI-PLATFORM mystery UPLOAD =====
       - name: 📤 Upload to multiple platforms
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
@@ -364,9 +362,7 @@ jobs:
           PLATFORMS: ${{ github.event.inputs.platforms }}
           FORCE_ALL: ${{ github.event.inputs.force_all }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-        run: |
-          echo "🔥 Uploading mysterious fire to all platforms..."
-          python .github/scripts/upload_multiplatform.py
+        run: python .github/scripts/upload_multiplatform.py
 
       - name: 🔍 Find actual video file
         if: success() && steps.schedule_check.outputs.should_post == 'true'
@@ -376,6 +372,11 @@ jobs:
             VIDEO_PATH="tmp/short.mp4"
           else
             VIDEO_PATH=$(find tmp -name "*.mp4" -type f | head -n 1)
+          fi
+          
+          if [ -z "$VIDEO_PATH" ]; then
+            echo "❌ No video file found!"
+            exit 1
           fi
           
           VIDEO_PATH=$(realpath "$VIDEO_PATH")
@@ -389,10 +390,10 @@ jobs:
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         id: makecom_prep
         run: |
-          TITLE=$(jq -r '.title' tmp/script.json)
-          DESCRIPTION=$(jq -r '.description' tmp/script.json)
-          HASHTAGS=$(jq -r '.hashtags | join(" ")' tmp/script.json)
-          KEY_PHRASE=$(jq -r '.key_phrase' tmp/script.json)
+          TITLE=$(jq -r '.title // "Mystery Short"' tmp/script.json)
+          DESCRIPTION=$(jq -r '.description // ""' tmp/script.json)
+          HASHTAGS=$(jq -r '.hashtags // [] | join(" ")' tmp/script.json)
+          KEY_PHRASE=$(jq -r '.key_phrase // "MYSTERY"' tmp/script.json)
           
           VIDEO_PATH="${{ steps.find_video.outputs.video_path }}"
           VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
@@ -403,34 +404,49 @@ jobs:
           FACEBOOK_URL=""
           
           if [ -f tmp/multiplatform_log.json ]; then
-            YOUTUBE_URL=$(jq -r '.[-1].results[] | select(.platform=="youtube") | .url // ""' tmp/multiplatform_log.json)
-            TIKTOK_URL=$(jq -r '.[-1].results[] | select(.platform=="tiktok") | .url // ""' tmp/multiplatform_log.json)
-            INSTAGRAM_URL=$(jq -r '.[-1].results[] | select(.platform=="instagram") | .url // ""' tmp/multiplatform_log.json)
-            FACEBOOK_URL=$(jq -r '.[-1].results[] | select(.platform=="facebook") | .url // ""' tmp/multiplatform_log.json)
+            YOUTUBE_URL=$(jq -r '.[-1].results[] | select(.platform=="youtube") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
+            TIKTOK_URL=$(jq -r '.[-1].results[] | select(.platform=="tiktok") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
+            INSTAGRAM_URL=$(jq -r '.[-1].results[] | select(.platform=="instagram") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
+            FACEBOOK_URL=$(jq -r '.[-1].results[] | select(.platform=="facebook") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
           fi
           
-          cat > tmp/makecom_payload.json <<EOF
+          cat > tmp/makecom_payload.json <<'PAYLOAD'
           {
-            "title": "$TITLE",
-            "description": "$DESCRIPTION",
-            "hashtags": "$HASHTAGS",
-            "key_phrase": "$KEY_PHRASE",
-            "video_name": "$(basename $VIDEO_PATH)",
-            "video_size_mb": $(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc),
-            "workflow_run": "${{ github.run_number }}",
-            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "title": "TITLE_PLACEHOLDER",
+            "description": "DESCRIPTION_PLACEHOLDER",
+            "hashtags": "HASHTAGS_PLACEHOLDER",
+            "key_phrase": "KEY_PHRASE_PLACEHOLDER",
+            "video_name": "VIDEO_NAME_PLACEHOLDER",
+            "video_size_mb": VIDEO_SIZE_PLACEHOLDER,
+            "workflow_run": "WORKFLOW_RUN_PLACEHOLDER",
+            "timestamp": "TIMESTAMP_PLACEHOLDER",
             "niche": "mystery",
-            "content_type": "${{ steps.schedule_check.outputs.content_type }}",
-            "priority": "${{ steps.schedule_check.outputs.priority }}",
-            "intensity": "${{ github.event.inputs.intensity }}",
+            "content_type": "CONTENT_TYPE_PLACEHOLDER",
+            "priority": "PRIORITY_PLACEHOLDER",
             "platform_urls": {
-              "youtube": "$YOUTUBE_URL",
-              "tiktok": "$TIKTOK_URL",
-              "instagram": "$INSTAGRAM_URL",
-              "facebook": "$FACEBOOK_URL"
+              "youtube": "YOUTUBE_URL_PLACEHOLDER",
+              "tiktok": "TIKTOK_URL_PLACEHOLDER",
+              "instagram": "INSTAGRAM_URL_PLACEHOLDER",
+              "facebook": "FACEBOOK_URL_PLACEHOLDER"
             }
           }
-          EOF
+          PAYLOAD
+          
+          # Use sed to replace placeholders safely
+          sed -i "s|TITLE_PLACEHOLDER|${TITLE}|g" tmp/makecom_payload.json
+          sed -i "s|DESCRIPTION_PLACEHOLDER|${DESCRIPTION}|g" tmp/makecom_payload.json
+          sed -i "s|HASHTAGS_PLACEHOLDER|${HASHTAGS}|g" tmp/makecom_payload.json
+          sed -i "s|KEY_PHRASE_PLACEHOLDER|${KEY_PHRASE}|g" tmp/makecom_payload.json
+          sed -i "s|VIDEO_NAME_PLACEHOLDER|$(basename $VIDEO_PATH)|g" tmp/makecom_payload.json
+          sed -i "s|VIDEO_SIZE_PLACEHOLDER|$(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc)|g" tmp/makecom_payload.json
+          sed -i "s|WORKFLOW_RUN_PLACEHOLDER|${{ github.run_number }}|g" tmp/makecom_payload.json
+          sed -i "s|TIMESTAMP_PLACEHOLDER|$(date -u +%Y-%m-%dT%H:%M:%SZ)|g" tmp/makecom_payload.json
+          sed -i "s|CONTENT_TYPE_PLACEHOLDER|${{ steps.schedule_check.outputs.content_type }}|g" tmp/makecom_payload.json
+          sed -i "s|PRIORITY_PLACEHOLDER|${{ steps.schedule_check.outputs.priority }}|g" tmp/makecom_payload.json
+          sed -i "s|YOUTUBE_URL_PLACEHOLDER|${YOUTUBE_URL}|g" tmp/makecom_payload.json
+          sed -i "s|TIKTOK_URL_PLACEHOLDER|${TIKTOK_URL}|g" tmp/makecom_payload.json
+          sed -i "s|INSTAGRAM_URL_PLACEHOLDER|${INSTAGRAM_URL}|g" tmp/makecom_payload.json
+          sed -i "s|FACEBOOK_URL_PLACEHOLDER|${FACEBOOK_URL}|g" tmp/makecom_payload.json
           
           echo "✅ Make.com payload prepared"
           cat tmp/makecom_payload.json
@@ -438,38 +454,48 @@ jobs:
       - name: ☁️ Upload video to Cloudinary
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         id: upload_temp
-        run: |
-          echo "📤 Uploading to Cloudinary..."
-          export VIDEO_TO_UPLOAD="${{ steps.find_video.outputs.video_path }}"
-          python .github/scripts/upload_to_cloudinary.py
-          VIDEO_URL=$(cat tmp/video_url.txt)
-          echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
-          echo "✅ Video URL: $VIDEO_URL"
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          echo "📤 Uploading to Cloudinary..."
+          export VIDEO_TO_UPLOAD="${{ steps.find_video.outputs.video_path }}"
+          python .github/scripts/upload_to_cloudinary.py
+          
+          if [ -f tmp/video_url.txt ]; then
+            VIDEO_URL=$(cat tmp/video_url.txt)
+            echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
+            echo "✅ Video URL: $VIDEO_URL"
+          fi
 
       - name: 🔗 Send to Make.com webhook
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         run: |
+          if [ -z "${{ secrets.MAKECOM_WEBHOOK_URL }}" ]; then
+            echo "⚠️ Make.com webhook URL not configured, skipping"
+            exit 0
+          fi
+          
           PAYLOAD=$(cat tmp/makecom_payload.json)
           VIDEO_URL="${{ steps.upload_temp.outputs.video_url }}"
           
           curl -X POST "${{ secrets.MAKECOM_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d "{
-              \"video_url\": \"$VIDEO_URL\",
-              \"niche\": \"mystery\",
-              \"content_type\": \"${{ steps.schedule_check.outputs.content_type }}\",
-              \"metadata\": $PAYLOAD,
-              \"github\": {
-                \"run_id\": \"${{ github.run_id }}\",
-                \"run_number\": \"${{ github.run_number }}\",
-                \"repository\": \"${{ github.repository }}\"
-              }
-            }"
+            -H "User-Agent: GitHub-Actions-5AM-Legion" \
+            -d @- <<EOF
+          {
+            "video_url": "$VIDEO_URL",
+            "niche": "mystery",
+            "content_type": "${{ steps.schedule_check.outputs.content_type }}",
+            "metadata": $PAYLOAD,
+            "github": {
+              "run_id": "${{ github.run_id }}",
+              "run_number": "${{ github.run_number }}",
+              "repository": "${{ github.repository }}"
+            }
+          }
+          EOF
           
           echo "✅ Webhook sent to Make.com"
 
@@ -480,9 +506,7 @@ jobs:
           GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
-        run: |
-          echo "📚 Organizing into mysterious playlists..."
-          python .github/scripts/manage_playlists.py
+        run: python .github/scripts/manage_playlists.py
 
       - name: 💾 Save platform config
         uses: actions/cache/save@v4
@@ -530,10 +554,15 @@ jobs:
       - name: 🔥 Workflow Summary
         if: always()
         run: |
-          echo "## Mythica Report - mysterious Empire" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Mythica Report - Mystery Archives" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Time:** ${{ steps.schedule_check.outputs.current_time }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Posted:** ${{ steps.schedule_check.outputs.should_post }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Priority:** ${{ steps.schedule_check.outputs.priority }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Content Type:** ${{ steps.schedule_check.outputs.content_type }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Intensity:** ${{ github.event.inputs.intensity }}" >> $GITHUB_STEP_SUMMARY
+          echo "**⏰ Time:** ${{ steps.schedule_check.outputs.current_time }}" >> $GITHUB_STEP_SUMMARY
+          echo "**✅ Posted:** ${{ steps.schedule_check.outputs.should_post }}" >> $GITHUB_STEP_SUMMARY
+          echo "**⭐ Priority:** ${{ steps.schedule_check.outputs.priority }}" >> $GITHUB_STEP_SUMMARY
+          echo "**🔍 Content Type:** ${{ steps.schedule_check.outputs.content_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Optimal Posting Windows (WAT)" >> $GITHUB_STEP_SUMMARY
+          echo "- **5-6 AM:** Morning Warriors (HIGHEST engagement)" >> $GITHUB_STEP_SUMMARY
+          echo "- **2-3 AM:** Late Night Crisis (HIGHEST virality) 🔥" >> $GITHUB_STEP_SUMMARY
+          echo "- **12-2 PM:** Midday Boost" >> $GITHUB_STEP_SUMMARY
+          echo "- **6-9 PM:** Evening Reflection" >> $GITHUB_STEP_SUMMARY
