@@ -38,32 +38,36 @@ on:
   # ✅ CORRECTED CRON TIMES (UTC for GitHub)
   
   # Monday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 19 * * 1'    # 8 PM WAT - Evening mystery
-  - cron: '0 22 * * 1'    # 11 PM WAT - Late night intrigue
+  - cron: '0 4 * * 1'    # 8 PM WAT - Evening mystery
+  - cron: '0 19 * * 1'    # 11 PM WAT - Late night intrigue
   
   # Tuesday: 7 PM WAT (18:00), 10 PM WAT (21:00)
-  - cron: '0 18 * * 2'    # 7 PM WAT - Prime mystery time
-  - cron: '0 21 * * 2'    # 10 PM WAT - Night scrollers
+  - cron: '0 5 * * 2'    # 7 PM WAT - Prime mystery time
+  - cron: '0 11 * * 2'    # 10 PM WAT - Night scrollers
+  - cron: '0 22 * * 2'    # 1 AM WAT - Peak virality hour
   
   # Wednesday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 19 * * 3'    # 8 PM WAT - Mid-week mystery
-  - cron: '0 22 * * 3'    # 11 PM WAT - Late engagement
+  - cron: '0 4 * * 3'    # 8 PM WAT - Mid-week mystery
+  - cron: '0 18 * * 3'    # 11 PM WAT - Late engagement
   
   # Thursday: 7 PM WAT (18:00), 11 PM WAT (22:00)
-  - cron: '0 18 * * 4'    # 7 PM WAT - Early evening
-  - cron: '0 22 * * 4'    # 11 PM WAT - Peak night time
+  - cron: '0 1 * * 4'    # 7 PM WAT - Early evening
+  - cron: '0 5 * * 4'    # 11 PM WAT - Peak night time
   
   # Friday: 9 PM WAT (20:00), 12 AM WAT (23:00)
-  - cron: '0 20 * * 5'    # 9 PM WAT - Friday evening
-  - cron: '0 23 * * 5'    # 12 AM WAT - Friday late night
+  - cron: '0 4 * * 5'    # 9 PM WAT - Friday evening
+  - cron: '0 17 * * 5'    # 12 AM WAT - Friday late night
   
   # Saturday: 8 PM WAT (19:00), 11 PM WAT (22:00)
-  - cron: '0 19 * * 6'    # 8 PM WAT - Weekend evening
-  - cron: '0 22 * * 6'    # 11 PM WAT - Saturday night binge
+  - cron: '0 6 * * 6'    # 8 PM WAT - Weekend evening
+  - cron: '0 13 * * 6'    # 11 PM WAT - Saturday night binge
+  - cron: '0 21 * * 6'    # 1 AM WAT - Peak binge hour
   
   # Sunday: 7 PM WAT (18:00), 10 PM WAT (21:00)
-  - cron: '0 18 * * 0'    # 7 PM WAT - Sunday evening
-  - cron: '0 21 * * 0'    # 10 PM WAT - Week ahead prep
+  - cron: '0 5 * * 0'    # 7 PM WAT - Sunday evening
+  - cron: '0 7 * * 0'    # 10 PM WAT - Week ahead prep
+  - cron: '0 20 * * 0'    # 1 AM WAT - Final binge hour
+  - cron: '0 0 * * 0'    # 2 AM WAT - Ultimate virality time
 
 jobs:
   build_and_upload:
