@@ -479,9 +479,14 @@ def apply_vignette_noir(img, strength=0.6):
     mask = Image.new('L', (width, height), 255)
     draw = ImageDraw.Draw(mask)
     
-    for i in range(int(min(width, height) * strength)):
-        alpha = int(255 * (1 - i / (min(width, height) * strength)))
-        draw.rectangle([i, i, width-i, height-i], outline=alpha)
+    max_dim = int(min(width, height) * strength)
+    for i in range(max_dim):
+        alpha = int(255 * (1 - i / max_dim))
+        # Ensure rectangle coordinates are valid (x0 < x1, y0 < y1)
+        x0, y0 = i, i
+        x1, y1 = width - i - 1, height - i - 1
+        if x1 > x0 and y1 > y0:
+            draw.rectangle([x0, y0, x1, y1], outline=alpha)
     
     black = Image.new('RGB', (width, height), (0, 0, 0))
     return Image.composite(img, black, mask)
@@ -913,17 +918,20 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
         color_fallback = NOIR_COLORS['deep_black']
     
     if image_path and os.path.exists(image_path):
-        bg = ImageClip(image_path).set_duration(duration).set_start(start_time)
+        bg = ImageClip(image_path)
         
         # Resize to fit screen height
         if bg.h != h:
             bg = bg.resize(height=h)
         
+        # Set duration and start time
+        bg = bg.with_duration(duration).with_start(start_time)
+        
         # Apply fades
         bg = apply_fadein(bg, 0.5)
         bg = apply_fadeout(bg, 0.5)
     else:
-        bg = ColorClip(size=(w, h), color=color_fallback, duration=duration).set_start(start_time)
+        bg = ColorClip(size=(w, h), color=color_fallback).with_duration(duration).with_start(start_time)
     
     scene_clips.append(bg)
     
@@ -952,9 +960,9 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
         pos_y = h - text_h - SAFE_ZONE_MARGIN - 150
         
         text_clip = (text_clip
-                    .set_duration(duration)
-                    .set_start(start_time)
-                    .set_position(('center', pos_y)))
+                    .with_duration(duration)
+                    .with_start(start_time)
+                    .with_position(('center', pos_y)))
         
         text_clip = apply_fadein(text_clip, 0.5)
         text_clip = apply_fadeout(text_clip, 0.5)
@@ -1014,15 +1022,15 @@ if background_music:
         voice_adjusted = apply_volumex(audio, 1.0)  # Keep voice at 100%
         
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
-        video = video.set_audio(final_audio)
+        video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
     except Exception as e:
         print(f"   ⚠️ Music compositing failed: {e}")
         import traceback
         traceback.print_exc()
-        video = video.set_audio(audio)
+        video = video.with_audio(audio)
 else:
-    video = video.set_audio(audio)
+    video = video.with_audio(audio)
     print(f"   ⚠️ Audio: TTS only (no background music)")
 
 if video.audio is None:
