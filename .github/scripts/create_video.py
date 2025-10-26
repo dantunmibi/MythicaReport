@@ -991,6 +991,7 @@ print(f"\n🎬 Composing mystery video ({len(clips)} clips)...")
 video = CompositeVideoClip(clips, size=(w, h))
 
 # 🎵 ADD BACKGROUND MUSIC
+# 🎵 ADD BACKGROUND MUSIC
 print(f"\n🔊 Adding audio with dark ambient music...")
 
 background_music = create_dynamic_music_layer(duration, data)
@@ -998,21 +999,21 @@ background_music = create_dynamic_music_layer(duration, data)
 if background_music:
     try:
         voice_adjusted = apply_volumex(audio, 1.0)
-        
+
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
-        # ✅ FIXED: Use set_audio instead of with_audio
-        video = video.set_audio(final_audio)
+        # ✅ FIXED: Use with_audio instead of set_audio (MoviePy 2.0+)
+        video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
     except Exception as e:
         print(f"   ⚠️ Music compositing failed: {e}")
         import traceback
         traceback.print_exc()
-        # ✅ FIXED: Use set_audio for fallback too
-        video = video.set_audio(audio)
+        # ✅ FIXED: Use with_audio for fallback too
+        video = video.with_audio(audio)
 else:
-    # ✅ FIXED: Use set_audio for fallback
-    video = video.set_audio(audio)
-    print(f"   ⚠️ Audio: TTS only (no background music)")
+    # ✅ FIXED: Use with_audio for fallback
+    video = video.with_audio(audio)
+    print(f" ⚠️ Audio: TTS only (no background music)")
 
 if video.audio is None:
     raise Exception("Audio attachment failed!")
@@ -1030,13 +1031,13 @@ try:
         bitrate='8000k',
         logger=None
     )
-    
+
     sync_status = "NEAR-PERFECT" if abs(current_time - duration) < 0.05 else "EXCELLENT" if abs(current_time - duration) < 0.5 else "GOOD"
-    
+
     print(f"\n✅ MYSTERY VIDEO COMPLETE!")
     print(f"   Path: {OUT}")
     print(f"   Duration: {duration:.2f}s")
-    
+
     # YouTube Shorts check
     if duration > 60:
         print(f"   ⚠️ WARNING: Video exceeds YouTube Shorts 60s limit!")
@@ -1046,7 +1047,7 @@ try:
         print(f"   ⚠️ CAUTION: Close to 60s limit ({60 - duration:.2f}s buffer)")
     else:
         print(f"   ✅ Within YouTube Shorts limit ({60 - duration:.2f}s buffer)")
-    
+
     print(f"   Size: {os.path.getsize(OUT) / (1024*1024):.2f} MB")
     print(f"   Sync Status: {sync_status} ({abs(current_time - duration)*1000:.0f}ms drift)")
     print(f"   Features:")
@@ -1062,7 +1063,6 @@ try:
     print(f"      ✓ ✅ VARIED text positioning")
     print(f"      ✓ Paragraph-based timing")
     print(f"   🔍 Mystery video ready!")
-    
 except Exception as e:
     print(f"❌ Video creation failed: {e}")
     import traceback
