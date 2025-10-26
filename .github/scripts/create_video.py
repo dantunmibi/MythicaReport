@@ -431,7 +431,7 @@ def generate_mystery_fallback(bg_path, scene_index, mystery_category, width=1080
                 print(f"    ✅ Pexels photo saved (id: {photo_id})")
 
                 img = Image.open(bg_path).convert("RGB")
-                img = img.resize((width, height), Image.LANCZOS)
+                img = img.resized((width, height), Image.LANCZOS)
                 img.save(bg_path, quality=95)
                 
                 return bg_path
@@ -920,9 +920,9 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
     if image_path and os.path.exists(image_path):
         bg = ImageClip(image_path)
         
-        # Resize to fit screen height
+        # resized to fit screen height
         if bg.h != h:
-            bg = bg.resize(height=h)
+            bg = bg.resized(height=h)
         
         # Set duration and start time
         bg = bg.with_duration(duration).with_start(start_time)
