@@ -1,21 +1,12 @@
 #!/usr/bin/env python3
 """
 🔍 Create Mystery Video - PRODUCTION VERSION WITH MUSIC
-Features:
-- Near-perfect audio-video synchronization (<50ms drift)
-- Dark ambient background music with dynamic volume
-- Film noir color grading (desaturated, high contrast, vignette, grain)
-- Documentary-style mysterious imagery
-- Paragraph-based narrative timing (not bullets)
-- Audio timing metadata integration
-- Multiple AI provider fallbacks
-- Minimal text with typewriter font aesthetic
+Python 3.11 + MoviePy 2.0+ Compatible
 """
 
 import os
 import json
 import requests
-from moviepy import *
 import platform
 from tenacity import retry, stop_after_attempt, wait_exponential
 from pydub import AudioSegment
@@ -26,6 +17,17 @@ import random
 import subprocess
 import sys
 import numpy as np
+
+# ✅ FIXED: Proper MoviePy imports for 2.0+
+from moviepy.editor import (
+    VideoFileClip, AudioFileClip, ImageClip, ColorClip, 
+    TextClip, CompositeVideoClip, CompositeAudioClip,
+    concatenate_audioclips
+)
+from moviepy.video.fx.fadein import fadein
+from moviepy.video.fx.fadeout import fadeout
+from moviepy.video.fx.resize import resize
+from moviepy.audio.fx.volumex import volumex
 
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 OUT = os.path.join(TMP, "short.mp4")
@@ -64,11 +66,10 @@ def get_font_path():
     """Get serif/typewriter font for mystery aesthetic"""
     system = platform.system()
     if system == "Windows":
-        # Prefer Courier New (typewriter) or Georgia (serif)
         fonts = [
-            "C:/Windows/Fonts/cour.ttf",      # Courier New
-            "C:/Windows/Fonts/georgia.ttf",   # Georgia
-            "C:/Windows/Fonts/times.ttf",     # Times New Roman
+            "C:/Windows/Fonts/cour.ttf",
+            "C:/Windows/Fonts/georgia.ttf",
+            "C:/Windows/Fonts/times.ttf",
         ]
         for font in fonts:
             if os.path.exists(font):
@@ -79,7 +80,6 @@ def get_font_path():
         return "/System/Library/Fonts/Supplemental/Courier New.ttf"
         
     else:
-        # Linux - prefer serif fonts for mystery
         font_options = [
             "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
             "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
@@ -104,7 +104,6 @@ hook = data.get("hook", "")
 # ✅ MYSTERY VERSION: Read 'script' field instead of 'bullets'
 full_script = data.get("script", "")
 if not full_script:
-    # Fallback if old format
     bullets = data.get("bullets", [])
     cta = data.get("cta", "")
     full_script = f"{hook}\n\n{' '.join(bullets)}\n\n{cta}"
@@ -149,30 +148,6 @@ def load_audio_timing():
     return None
 
 
-def load_audio_metadata():
-    """Load audio metadata"""
-    metadata_path = os.path.join(TMP, "audio_metadata.json")
-    if os.path.exists(metadata_path):
-        try:
-            with open(metadata_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except:
-            return None
-    return None
-
-
-def get_section_duration_from_timing(section_name, timing_data):
-    """Get duration for a specific section from timing metadata"""
-    if not timing_data or 'sections' not in timing_data:
-        return None
-    
-    for section in timing_data['sections']:
-        if section['name'] == section_name:
-            return section['duration']
-    
-    return None
-
-
 def estimate_duration_fallback(text, audio_duration, all_paragraphs):
     """Fallback duration estimation if timing metadata not available"""
     if not text or not all_paragraphs:
@@ -193,7 +168,6 @@ def enhance_visual_prompt_for_mystery(prompt, scene_index, mystery_category):
     
     noir_base = "film noir photography, high contrast black and white, dramatic shadows, moody atmosphere, vintage 1940s-1960s aesthetic, film grain, mysterious, documentary style, cinematic lighting"
     
-    # Scene-based enhancements (based on narrative position)
     scene_enhancements = {
         0: "opening establishing shot, dark and mysterious, ominous atmosphere, noir cinematography",
         1: "documentary evidence style, vintage photograph, historical authenticity, aged photo quality",
@@ -211,7 +185,6 @@ def enhance_visual_prompt_for_mystery(prompt, scene_index, mystery_category):
     enhancement = scene_enhancements.get(scene_index, "mysterious noir aesthetic")
     category_words = category_keywords.get(mystery_category, category_keywords['disappearance'])
     
-    # Remove bright/cheerful words if present
     prompt = prompt.replace('happy', 'mysterious').replace('bright', 'dark').replace('colorful', 'monochrome')
     
     enhanced = f"{prompt}, {enhancement}, {category_words}, {noir_base}, foggy, unsettling, dark and ominous"
@@ -335,7 +308,6 @@ def generate_image_pollinations(prompt, filename, width=1080, height=1920):
 def generate_mystery_fallback(bg_path, scene_index, mystery_category, width=1080, height=1920):
     """Mystery-specific fallback with Unsplash/Pexels"""
     
-    # Mystery-themed keywords
     category_keywords = {
         'disappearance': ['abandoned', 'empty', 'fog', 'mystery', 'dark-sky', 'eerie'],
         'crime': ['noir', 'detective', 'shadow', 'urban-night', 'alley', 'investigation'],
@@ -364,7 +336,6 @@ def generate_mystery_fallback(bg_path, scene_index, mystery_category, width=1080
     except Exception as e:
         print(f"    ⚠️ Unsplash error: {e}")
 
-    # Noir/mystery Pexels photos
     try:
         print("    🔄 Trying Pexels curated mystery photos...")
         
@@ -411,7 +382,6 @@ def create_noir_gradient(filepath, scene_index, width=1080, height=1920):
     img = Image.new("RGB", (width, height), (0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Different gradients for different scenes
     if scene_index == 0:
         colors = [NOIR_COLORS['deep_black'], NOIR_COLORS['dark_slate']]
     elif scene_index == 1:
@@ -428,7 +398,6 @@ def create_noir_gradient(filepath, scene_index, width=1080, height=1920):
         b = int(colors[0][2] * (1 - ratio) + colors[1][2] * ratio)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
     
-    # Add heavy vignette for noir feel
     img = apply_vignette_noir(img, strength=0.6)
     
     img.save(filepath, quality=95)
@@ -481,40 +450,19 @@ def generate_image_reliable(prompt, filename, scene_index, mystery_category, wid
 
 
 def apply_noir_filter(image_path, scene_index):
-    """
-    Apply film noir aesthetic (REPLACES teal & orange)
-    - Desaturate 70%
-    - High contrast
-    - Dark overall
-    - Heavy vignette
-    - Film grain
-    - Slight blue tint
-    """
+    """Apply film noir aesthetic"""
     
     print(f"      🎨 Applying film noir filter...")
     
     try:
         img = Image.open(image_path).convert('RGB')
         
-        # 1. Desaturate (70% desaturation)
-        img = ImageEnhance.Color(img).enhance(0.30)  # 30% color left
-        
-        # 2. Increase contrast (noir is high contrast)
+        img = ImageEnhance.Color(img).enhance(0.30)
         img = ImageEnhance.Contrast(img).enhance(1.60)
-        
-        # 3. Darken overall (noir is darker)
         img = ImageEnhance.Brightness(img).enhance(0.70)
-        
-        # 4. Slight blue/teal tint (classic noir look)
         img = apply_blue_tint(img, intensity=0.15)
-        
-        # 5. Add film grain
         img = add_film_grain_noir(img, intensity=0.15)
-        
-        # 6. Heavy vignette
         img = apply_vignette_noir(img, strength=0.60)
-        
-        # 7. Slight sharpen for clarity
         img = img.filter(ImageFilter.SHARPEN)
         
         img.save(image_path, quality=95)
@@ -535,7 +483,6 @@ def apply_blue_tint(img, intensity=0.15):
         for y in range(height):
             r, g, b = pixels[x, y]
             
-            # Add blue tint
             r = int(r + (10 - r) * intensity)
             g = int(g + (20 - g) * intensity)
             b = int(b + (40 - b) * intensity)
@@ -557,7 +504,7 @@ def add_film_grain_noir(img, intensity=0.15):
         return img
 
 
-# 🎵 MUSIC INTEGRATION (Dark Ambient for Mystery) - FIXED
+# 🎵 MUSIC INTEGRATION
 
 def ensure_music_downloaded():
     """Download essential mystery music tracks before use"""
@@ -567,7 +514,6 @@ def ensure_music_downloaded():
     
     print("\n🎵 Checking mystery music library...")
     
-    # Essential mystery tracks to download
     essential_tracks = [
         'dark_mystery',
         'suspense_build',
@@ -592,10 +538,7 @@ def ensure_music_downloaded():
 
 
 def create_dynamic_music_layer(audio_duration, script_data):
-    """
-    Create music layer with dark ambient/tension music
-    Mystery uses subtle background music (lower volume than motivation)
-    """
+    """Create music layer with dark ambient/tension music"""
     
     if not MUSIC_AVAILABLE:
         print("⚠️ Music system unavailable, skipping background music")
@@ -603,7 +546,6 @@ def create_dynamic_music_layer(audio_duration, script_data):
     
     print("\n🎵 Creating mystery music layer...")
     
-    # Ensure music is downloaded first
     if not ensure_music_downloaded():
         print("⚠️ No music tracks available, skipping")
         return None
@@ -611,15 +553,13 @@ def create_dynamic_music_layer(audio_duration, script_data):
     content_type = script_data.get('content_type', 'general')
     mystery_category = script_data.get('mystery_category', 'disappearance')
     
-    # ✅ FIXED: Map content types to MYSTERY scene names
     scene_map = {
-        'evening_prime': 'investigation',    # Dark detective vibe
-        'late_night': 'suspense',            # Tense, unsettling
-        'weekend_binge': 'paranormal',       # Eerie atmosphere
-        'general': 'investigation'           # Default mystery
+        'evening_prime': 'investigation',
+        'late_night': 'suspense',
+        'weekend_binge': 'paranormal',
+        'general': 'investigation'
     }
     
-    # Also map mystery categories to appropriate scenes
     category_scene_map = {
         'disappearance': 'suspense',
         'crime': 'investigation',
@@ -630,7 +570,6 @@ def create_dynamic_music_layer(audio_duration, script_data):
         'unsolved': 'unsolved'
     }
     
-    # Try category-based scene first, then content-type
     primary_scene = category_scene_map.get(mystery_category) or scene_map.get(content_type, 'investigation')
     
     print(f"   🎯 Scene type: {primary_scene}")
@@ -641,7 +580,6 @@ def create_dynamic_music_layer(audio_duration, script_data):
         print(f"   ⚠️ Failed to get music for scene '{primary_scene}': {e}")
         print(f"   🔄 Trying fallback...")
         
-        # Fallback to any available track
         for fallback_scene in ['investigation', 'suspense', 'paranormal', 'general']:
             try:
                 track_key, music_path, _ = get_music_for_scene(fallback_scene, 'general')
@@ -658,33 +596,28 @@ def create_dynamic_music_layer(audio_duration, script_data):
     print(f"   📁 Path: {music_path}")
     
     try:
-        # Load base music
         music = AudioFileClip(music_path)
         
-        # Loop if needed
         if music.duration < audio_duration:
             loops_needed = int(audio_duration / music.duration) + 1
             print(f"   🔁 Looping music {loops_needed}x")
             
-            from moviepy.audio.AudioClip import concatenate_audioclips
             music_clips = [music] * loops_needed
             music = concatenate_audioclips(music_clips)
         
-        # Trim to exact duration
-        music = music.subclipped(0, min(audio_duration, music.duration))
+        # ✅ FIXED: Use subclip instead of subclipped
+        music = music.subclip(0, min(audio_duration, music.duration))
         
-        # MYSTERY USES LOWER VOLUME (more subtle than motivation)
         volume_levels = {
-            'evening_prime': 0.20,   # Subtle (mystery is about voice)
-            'late_night': 0.15,      # Very subtle (unsettling silence)
-            'weekend_binge': 0.22,   # Slightly more (documentary)
-            'general': 0.18          # Default subtle
+            'evening_prime': 0.20,
+            'late_night': 0.15,
+            'weekend_binge': 0.22,
+            'general': 0.18
         }
         
         base_volume = volume_levels.get(content_type, 0.18)
         
-        # Use volumex for compatibility
-        from moviepy.audio.fx.volumex import volumex
+        # ✅ FIXED: Use fx method properly
         music = music.fx(volumex, base_volume)
         
         print(f"   ✅ Mystery music layer created at {base_volume*100:.0f}% volume")
@@ -703,19 +636,15 @@ def create_dynamic_music_layer(audio_duration, script_data):
 
 print("🔍 Generating mystery scenes...")
 
-# ✅ MYSTERY VERSION: Generate images for paragraphs (not bullets)
-# Use first 4 paragraphs for visuals (hook, setup, incident, twist typically)
 scene_images = []
 
 try:
-    # Generate images for first 4 narrative sections
     num_scenes = min(4, len(paragraphs))
     
     for i in range(num_scenes):
         paragraph = paragraphs[i] if i < len(paragraphs) else ""
         visual_prompt = visual_prompts[i] if i < len(visual_prompts) else f"Noir mystery scene: {paragraph[:100]}"
         
-        # Enhance for noir aesthetic
         visual_prompt = enhance_visual_prompt_for_mystery(visual_prompt, i, mystery_category)
         
         print(f"🎬 Generating scene {i+1}/{num_scenes}...")
@@ -734,7 +663,6 @@ except Exception as e:
     print(f"⚠️ Image generation error: {e}")
     scene_images = [None] * 4
 
-# Validate images
 print(f"🔍 Validating {len(scene_images)} scenes...")
 for i in range(len(scene_images)):
     img = scene_images[i] if i < len(scene_images) else None
@@ -747,7 +675,7 @@ for i in range(len(scene_images)):
 
 print(f"✅ All mystery scenes validated")
 
-# --- Audio Loading & Timing (OPTIMIZED FOR PARAGRAPHS) ---
+# --- Audio Loading & Timing ---
 
 if not os.path.exists(audio_path):
     print(f"❌ Audio not found: {audio_path}")
@@ -757,10 +685,8 @@ audio = AudioFileClip(audio_path)
 duration = audio.duration
 print(f"🎵 Audio: {duration:.2f}s")
 
-# ✅ LOAD TIMING METADATA (works with paragraph-based timing)
 timing_data = load_audio_timing()
 
-# Calculate durations for each paragraph
 paragraph_durations = []
 
 if timing_data and timing_data.get('optimized'):
@@ -776,12 +702,10 @@ if timing_data and timing_data.get('optimized'):
             paragraph_durations.append(dur)
             print(f"   Paragraph {i+1}: {dur:.2f}s (from metadata)")
         else:
-            # Estimate
             dur = estimate_duration_fallback(paragraph, duration, paragraphs)
             paragraph_durations.append(dur)
             print(f"   Paragraph {i+1}: {dur:.2f}s (estimated)")
     
-    # Adjust to match total duration
     total_calculated = sum(paragraph_durations)
     
     if abs(total_calculated - duration) > 0.5:
@@ -812,14 +736,14 @@ print(f"   Total Timeline: {total_timeline:.2f}s")
 print(f"   Audio Duration: {duration:.2f}s")
 print(f"   Drift: {abs(total_timeline - duration)*1000:.0f}ms")
 
-# --- Video Composition (MYSTERY VERSION) ---
+# --- Video Composition ---
 
 clips = []
 current_time = 0
 
 
 def smart_text_wrap(text, font_size, max_width):
-    """Smart text wrapping (mystery uses less text overall)"""
+    """Smart text wrapping"""
     try:
         pil_font = ImageFont.truetype(FONT, font_size)
         dummy_img = Image.new('RGB', (1, 1))
@@ -870,7 +794,7 @@ def smart_text_wrap(text, font_size, max_width):
 
 
 def create_text_with_effects(text, font_size=60, max_width=TEXT_MAX_WIDTH):
-    """Create text with mystery styling (smaller, serif font)"""
+    """Create text with mystery styling"""
     wrapped = smart_text_wrap(text, font_size, max_width)
     
     try:
@@ -887,7 +811,7 @@ def create_text_with_effects(text, font_size=60, max_width=TEXT_MAX_WIDTH):
             total_h += bbox[3] - bbox[1]
             max_w = max(max_w, bbox[2] - bbox[0])
         
-        max_height = h * 0.25  # Less text than motivation
+        max_height = h * 0.25
         iterations = 0
         
         while (total_h > max_height or max_w > max_width) and font_size > 32 and iterations < 10:
@@ -913,31 +837,24 @@ def create_text_with_effects(text, font_size=60, max_width=TEXT_MAX_WIDTH):
 
 
 def create_scene(image_path, text, duration, start_time, show_text=True, color_fallback=None):
-    """
-    Create mystery scene with image + minimal text
-    Mystery shows LESS text than motivation (let visuals tell story)
-    """
+    """Create mystery scene with image + minimal text"""
     scene_clips = []
     
     if color_fallback is None:
         color_fallback = NOIR_COLORS['deep_black']
     
     if image_path and os.path.exists(image_path):
-        bg = (ImageClip(image_path)
-              .resized(height=h)
-              .with_duration(duration)
-              .with_start(start_time)
-              .with_effects([vfx.CrossFadeIn(0.5), vfx.CrossFadeOut(0.5)]))  # Slower fades for mystery
+        # ✅ FIXED: Use resize() and fx() methods properly
+        bg = ImageClip(image_path).resize(height=h).set_duration(duration).set_start(start_time)
+        
+        # ✅ FIXED: Apply fades using fx()
+        bg = bg.fx(fadein, 0.5).fx(fadeout, 0.5)
     else:
-        bg = (ColorClip(size=(w, h), color=color_fallback, duration=duration)
-              .with_start(start_time))
+        bg = ColorClip(size=(w, h), color=color_fallback, duration=duration).set_start(start_time)
     
     scene_clips.append(bg)
     
-    # Mystery: Show MINIMAL text (only hook or key phrases)
-    # Most scenes don't show text - let narration carry the story
     if text and show_text:
-        # Extract key phrase (first sentence or ~10 words max)
         first_sentence = text.split('.')[0] if '.' in text else text
         key_words = ' '.join(first_sentence.split()[:10])
         
@@ -959,14 +876,15 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
         )
         
         text_h = text_clip.h
-        # Position at bottom for mystery (documentary subtitle style)
         pos_y = h - text_h - SAFE_ZONE_MARGIN - 150
         
+        # ✅ FIXED: Use set_duration, set_start, set_position
         text_clip = (text_clip
-                    .with_duration(duration)
-                    .with_start(start_time)
-                    .with_position(('center', pos_y))
-                    .with_effects([vfx.CrossFadeIn(0.5), vfx.CrossFadeOut(0.5)]))
+                    .set_duration(duration)
+                    .set_start(start_time)
+                    .set_position(('center', pos_y))
+                    .fx(fadein, 0.5)
+                    .fx(fadeout, 0.5))
         
         print(f"      Text: '{key_words[:30]}...' @ Y={pos_y}, Size={font_size}px")
         scene_clips.append(text_clip)
@@ -975,14 +893,11 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
 
 
 # Build mystery scenes
-# Mystery: Show text ONLY on first scene (hook), rest is pure visuals + narration
 for i, paragraph in enumerate(paragraphs):
     dur = paragraph_durations[i]
     
-    # Get image (cycle through available scenes)
     img_idx = min(i, len(scene_images) - 1)
     
-    # Only show text on first scene (hook)
     show_text = (i == 0)
     
     print(f"🎬 Paragraph {i+1}/{len(paragraphs)} (text: {show_text})...")
@@ -1016,29 +931,26 @@ else:
 print(f"\n🎬 Composing mystery video ({len(clips)} clips)...")
 video = CompositeVideoClip(clips, size=(w, h))
 
-# 🎵 ADD BACKGROUND MUSIC + TTS VOICEOVER
+# 🎵 ADD BACKGROUND MUSIC
 print(f"\n🔊 Adding audio with dark ambient music...")
 
 background_music = create_dynamic_music_layer(duration, data)
 
 if background_music:
     try:
-        from moviepy.audio.fx.audio_normalize import audio_normalize
+        # ✅ FIXED: Simple volume adjustment (normalize might not be available)
+        voice_adjusted = audio.fx(volumex, 1.0)  # Keep voice at 100%
         
-        # Normalize voice
-        voice_normalized = audio.fx(audio_normalize)
-        
-        # Composite: TTS voiceover + dark ambient music
-        final_audio = CompositeAudioClip([voice_normalized, background_music])
-        video = video.with_audio(final_audio)
+        final_audio = CompositeAudioClip([voice_adjusted, background_music])
+        video = video.set_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
     except Exception as e:
         print(f"   ⚠️ Music compositing failed: {e}")
         import traceback
         traceback.print_exc()
-        video = video.with_audio(audio)
+        video = video.set_audio(audio)
 else:
-    video = video.with_audio(audio)
+    video = video.set_audio(audio)
     print(f"   ⚠️ Audio: TTS only (no background music)")
 
 if video.audio is None:
@@ -1063,24 +975,31 @@ try:
     print(f"\n✅ MYSTERY VIDEO COMPLETE!")
     print(f"   Path: {OUT}")
     print(f"   Duration: {duration:.2f}s")
+    
+    # ✅ YouTube Shorts duration check
+    if duration > 60:
+        print(f"   ⚠️ WARNING: Video exceeds YouTube Shorts 60s limit!")
+        print(f"   Overflow: +{duration - 60:.2f}s")
+        print(f"   This video will be rejected by YouTube Shorts")
+        print(f"   Solution: Shorten your script or run trim_video.py")
+    elif duration > 55:
+        print(f"   ⚠️ CAUTION: Close to 60s limit ({60 - duration:.2f}s buffer)")
+    else:
+        print(f"   ✅ Within YouTube Shorts limit ({60 - duration:.2f}s buffer)")
+    
     print(f"   Size: {os.path.getsize(OUT) / (1024*1024):.2f} MB")
     print(f"   Sync Status: {sync_status} ({abs(current_time - duration)*1000:.0f}ms drift)")
     print(f"   Features:")
-    print(f"      ✓ Film noir aesthetic (desaturated, high contrast)")
+    print(f"      ✓ Film noir aesthetic")
     print(f"      ✓ Heavy vignette + film grain")
     if background_music:
         print(f"      ✓ Dark ambient background music")
-        print(f"      ✓ Professional audio mix (TTS + Music)")
+        print(f"      ✓ Professional audio mix")
     else:
-        print(f"      ⚠ Background music skipped (unavailable)")
-    print(f"      ✓ Paragraph-based narrative timing")
-    print(f"      ✓ Minimal text overlays (documentary style)")
-    print(f"      ✓ Serif/typewriter fonts")
-    print(f"      ✓ Mystery-optimized image generation")
-    print(f"      ✓ Noir gradient fallbacks")
-    print(f"      ✓ Slower crossfade transitions (0.5s)")
-    print(f"      ✓ Audio-synchronized timing")
-    print(f"   🔍 Mystery Archives ready!")
+        print(f"      ⚠ Background music skipped")
+    print(f"      ✓ Paragraph-based timing")
+    print(f"      ✓ Minimal text overlays")
+    print(f"   🔍 Mystery video ready!")
     
 except Exception as e:
     print(f"❌ Video creation failed: {e}")
