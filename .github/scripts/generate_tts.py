@@ -4,7 +4,7 @@
 Creates deep, mysterious voiceover optimized for documentary-style mystery narration
 
 Features:
-- Documentary narrator voices (p326, p287, p360)
+- Documentary narrator voices (p326, p287, p226)
 - Slower, deliberate pacing (0.85x for suspense)
 - Natural pauses for dramatic reveals
 - Clear articulation for complex narratives
@@ -26,7 +26,7 @@ PRIMARY_MODEL = "tts_models/en/vctk/vits"
 NARRATOR_SPEAKERS = {
     'p326': 'Deep authoritative male - Best for serious mysteries',
     'p287': 'Rich cinematic male - Best for dramatic reveals',
-    'p360': 'Clear documentary male - Best for complex stories',
+    'p226': 'Clear documentary male - Best for complex stories',
     'p259': 'Mature storyteller male - Backup option'
 }
 
@@ -48,7 +48,7 @@ SPEED_SETTINGS = {
 SPEAKER_BY_CONTENT = {
     'evening_prime': 'p326',      # Deep authoritative (accessible mysteries)
     'late_night': 'p287',         # Rich cinematic (darker tone)
-    'weekend_binge': 'p360',      # Clear documentary (complex stories)
+    'weekend_binge': 'p226',      # Clear documentary (complex stories)
     'general': 'p326'             # Default: authoritative
 }
 

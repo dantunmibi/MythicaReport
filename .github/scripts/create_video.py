@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 🔍 Create Mystery Video - PRODUCTION VERSION WITH MUSIC
-Python 3.11 + MoviePy 2.0+ Compatible
+Python 3.11 + MoviePy 2.0+ Compatible (GitHub Actions Ready)
 """
 
 import os
@@ -18,16 +18,84 @@ import subprocess
 import sys
 import numpy as np
 
-# ✅ FIXED: Proper MoviePy imports for 2.0+
-from moviepy.editor import (
-    VideoFileClip, AudioFileClip, ImageClip, ColorClip, 
-    TextClip, CompositeVideoClip, CompositeAudioClip,
-    concatenate_audioclips
-)
-from moviepy.video.fx.fadein import fadein
-from moviepy.video.fx.fadeout import fadeout
-from moviepy.video.fx.resize import resize
-from moviepy.audio.fx.volumex import volumex
+# ✅ FIXED: MoviePy 2.0+ imports (GitHub Actions compatible)
+try:
+    # Try direct module imports (MoviePy 2.0+ on some systems)
+    from moviepy import VideoFileClip, AudioFileClip, ImageClip, ColorClip, TextClip
+    from moviepy import CompositeVideoClip, CompositeAudioClip, concatenate_audioclips
+    print("✅ MoviePy imported (direct module)")
+except ImportError:
+    try:
+        # Fallback: Try moviepy.editor
+        from moviepy.editor import VideoFileClip, AudioFileClip, ImageClip, ColorClip, TextClip
+        from moviepy.editor import CompositeVideoClip, CompositeAudioClip, concatenate_audioclips
+        print("✅ MoviePy imported (editor module)")
+    except ImportError:
+        # Last resort: Import moviepy and access as attributes
+        import moviepy
+        VideoFileClip = moviepy.VideoFileClip
+        AudioFileClip = moviepy.AudioFileClip
+        ImageClip = moviepy.ImageClip
+        ColorClip = moviepy.ColorClip
+        TextClip = moviepy.TextClip
+        CompositeVideoClip = moviepy.CompositeVideoClip
+        CompositeAudioClip = moviepy.CompositeAudioClip
+        concatenate_audioclips = moviepy.concatenate_audioclips
+        print("✅ MoviePy imported (attribute access)")
+
+# ✅ FIXED: Import effects functions that work with both versions
+def apply_fadein(clip, duration=0.5):
+    """Universal fadein that works with any MoviePy version"""
+    try:
+        # Try using fx() method (newer API)
+        from moviepy.video.fx.fadein import fadein
+        return clip.fx(fadein, duration)
+    except:
+        try:
+            # Try direct function call
+            from moviepy.video.fx.fadein import fadein
+            return fadein(clip, duration)
+        except:
+            # Manual implementation fallback
+            def make_fadein(get_frame, t):
+                if t < duration:
+                    return get_frame(t) * (t / duration)
+                return get_frame(t)
+            clip = clip.fl(make_fadein)
+            return clip
+
+def apply_fadeout(clip, duration=0.5):
+    """Universal fadeout that works with any MoviePy version"""
+    try:
+        from moviepy.video.fx.fadeout import fadeout
+        return clip.fx(fadeout, duration)
+    except:
+        try:
+            from moviepy.video.fx.fadeout import fadeout
+            return fadeout(clip, duration)
+        except:
+            def make_fadeout(get_frame, t):
+                if t > clip.duration - duration:
+                    return get_frame(t) * ((clip.duration - t) / duration)
+                return get_frame(t)
+            clip = clip.fl(make_fadeout)
+            return clip
+
+def apply_volumex(clip, factor):
+    """Universal volume adjustment that works with any MoviePy version"""
+    try:
+        from moviepy.audio.fx.volumex import volumex
+        return clip.fx(volumex, factor)
+    except:
+        try:
+            from moviepy.audio.fx.volumex import volumex
+            return volumex(clip, factor)
+        except:
+            # Manual volume adjustment
+            def adjust_volume(get_frame, t):
+                return get_frame(t) * factor
+            clip = clip.fl(adjust_volume)
+            return clip
 
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 OUT = os.path.join(TMP, "short.mp4")
@@ -605,8 +673,9 @@ def create_dynamic_music_layer(audio_duration, script_data):
             music_clips = [music] * loops_needed
             music = concatenate_audioclips(music_clips)
         
-        # ✅ FIXED: Use subclip instead of subclipped
-        music = music.subclip(0, min(audio_duration, music.duration))
+        # Trim to match duration
+        if music.duration > audio_duration:
+            music = music.subclip(0, audio_duration)
         
         volume_levels = {
             'evening_prime': 0.20,
@@ -617,8 +686,8 @@ def create_dynamic_music_layer(audio_duration, script_data):
         
         base_volume = volume_levels.get(content_type, 0.18)
         
-        # ✅ FIXED: Use fx method properly
-        music = music.fx(volumex, base_volume)
+        # Apply volume
+        music = apply_volumex(music, base_volume)
         
         print(f"   ✅ Mystery music layer created at {base_volume*100:.0f}% volume")
         print(f"   ⏱️ Duration: {music.duration:.2f}s")
@@ -844,11 +913,15 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
         color_fallback = NOIR_COLORS['deep_black']
     
     if image_path and os.path.exists(image_path):
-        # ✅ FIXED: Use resize() and fx() methods properly
-        bg = ImageClip(image_path).resize(height=h).set_duration(duration).set_start(start_time)
+        bg = ImageClip(image_path).set_duration(duration).set_start(start_time)
         
-        # ✅ FIXED: Apply fades using fx()
-        bg = bg.fx(fadein, 0.5).fx(fadeout, 0.5)
+        # Resize to fit screen height
+        if bg.h != h:
+            bg = bg.resize(height=h)
+        
+        # Apply fades
+        bg = apply_fadein(bg, 0.5)
+        bg = apply_fadeout(bg, 0.5)
     else:
         bg = ColorClip(size=(w, h), color=color_fallback, duration=duration).set_start(start_time)
     
@@ -878,13 +951,13 @@ def create_scene(image_path, text, duration, start_time, show_text=True, color_f
         text_h = text_clip.h
         pos_y = h - text_h - SAFE_ZONE_MARGIN - 150
         
-        # ✅ FIXED: Use set_duration, set_start, set_position
         text_clip = (text_clip
                     .set_duration(duration)
                     .set_start(start_time)
-                    .set_position(('center', pos_y))
-                    .fx(fadein, 0.5)
-                    .fx(fadeout, 0.5))
+                    .set_position(('center', pos_y)))
+        
+        text_clip = apply_fadein(text_clip, 0.5)
+        text_clip = apply_fadeout(text_clip, 0.5)
         
         print(f"      Text: '{key_words[:30]}...' @ Y={pos_y}, Size={font_size}px")
         scene_clips.append(text_clip)
@@ -938,8 +1011,7 @@ background_music = create_dynamic_music_layer(duration, data)
 
 if background_music:
     try:
-        # ✅ FIXED: Simple volume adjustment (normalize might not be available)
-        voice_adjusted = audio.fx(volumex, 1.0)  # Keep voice at 100%
+        voice_adjusted = apply_volumex(audio, 1.0)  # Keep voice at 100%
         
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
         video = video.set_audio(final_audio)
