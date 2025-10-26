@@ -3,7 +3,6 @@ import sys
 
 REQUIRED_SECRETS = {
     "GEMINI_API_KEY": "AI content generation",
-    "HUGGINGFACE_API_KEY": "Image generation", 
     "GOOGLE_CLIENT_ID": "YouTube upload",
     "GOOGLE_CLIENT_SECRET": "YouTube upload",
     "GOOGLE_REFRESH_TOKEN": "YouTube upload"
