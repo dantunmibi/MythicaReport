@@ -397,7 +397,7 @@ If the trend is "Zodiac Killer", your script MUST be about that case.
     mystery_type_guidance = get_mystery_type_guidance(mystery_type)
     
     # Build the main prompt
-    prompt = f"""You are an expert mystery storyteller in the style of MrBallen and Unsolved Mysteries.
+    prompt = f"""You are an expert mystery storyteller in the style of MrBallen and Unsolved Mysteries for stories for youtube shorts between 45 and 75 seconds.
 
 CONTEXT:
 - Current date: {datetime.now().strftime('%Y-%m-%d')}
@@ -405,6 +405,17 @@ CONTEXT:
 - Content type: {content_type}
 - Mystery type: {mystery_type}
 - Priority: {priority}
+
+# 🎯 YOUTUBE SHORTS TARGET DURATION
+TARGET_DURATION = 60
+MIN_DURATION = 45
+MAX_DURATION = 75
+
+# Adjust word count for target duration
+# Average TTS speed: ~150 words/minute = 2.5 words/second
+TARGET_WORDS = int(TARGET_DURATION * 2.5)  # ~150 words for 60s
+
+print(f"🎯 Target: {TARGET_DURATION}s video (~{TARGET_WORDS} words)")
 
 PREVIOUSLY COVERED (DO NOT REPEAT):
 {chr(10).join(f"  • {t}" for t in previous_topics[-15:]) if previous_topics else '  None yet'}
