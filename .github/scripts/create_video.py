@@ -527,6 +527,38 @@ def apply_blue_tint(img, intensity=0.15):
     
     return img
 
+def detect_leading_trailing_silence(audio_path, silence_thresh_db=-45.0, chunk_ms=10):
+    """
+    Detect leading/trailing silence in seconds using pydub.
+    """
+    if not os.path.exists(audio_path):
+        print(f"⚠️ Cannot detect silence, audio not found at: {audio_path}")
+        return 0.0, 0.0
+    try:
+        audio = AudioSegment.from_file(audio_path)
+        
+        def _leading_silence(a):
+            trim = 0
+            # Iterate until we find a chunk that is not silent
+            while trim < len(a) and a[trim:trim+chunk_ms].dBFS < silence_thresh_db:
+                trim += chunk_ms
+            return trim / 1000.0
+
+        def _trailing_silence(a):
+            trim = 0
+            # Iterate from the end until we find a chunk that is not silent
+            while trim < len(a) and a[-trim-chunk_ms:len(a)-trim].dBFS < silence_thresh_db:
+                trim += chunk_ms
+            return trim / 1000.0
+
+        lead = _leading_silence(audio)
+        trail = _trailing_silence(audio)
+        print(f"🔧 Silence Detection — Lead: {lead:.3f}s, Trail: {trail:.3f}s")
+        return lead, trail
+    except Exception as e:
+        print(f"⚠️ Pydub silence detection failed: {e}")
+        return 0.0, 0.0
+
 
 def add_film_grain_noir(img, intensity=0.15):
     """Add film grain for vintage noir feel"""
@@ -996,102 +1028,143 @@ print(f"✅ All mystery scenes validated")
 
 # --- Audio Loading & Timing ---
 
+# --- Audio Loading & Timing ---
+
 if not os.path.exists(audio_path):
     print(f"❌ Audio not found: {audio_path}")
     raise FileNotFoundError("voice.mp3 missing")
 
-audio = AudioFileClip(audio_path)
+# Convert to WAV for frame-accurate timing (avoids MP3 encoder delay)
+wav_path = os.path.join(TMP, "voice.wav")
+try:
+    AudioSegment.from_file(audio_path).export(wav_path, format="wav")
+    print("✅ Converted audio to WAV for accurate timing.")
+except Exception as e:
+    print(f"⚠️ WAV conversion failed ({e}), using original MP3.")
+    wav_path = audio_path
+
+
+audio = AudioFileClip(wav_path)
 duration = audio.duration
-print(f"🎵 Audio: {duration:.2f}s")
+print(f"🎵 Audio Duration: {duration:.2f}s")
+
+# ✅ SYNC FIX: Detect silence and define the actual speech window
+lead_silence, trail_silence = detect_leading_trailing_silence(wav_path)
+manual_offset = float(os.getenv("SYNC_OFFSET_S", "0.0")) # Optional fine-tuning via env var
+start_offset = lead_silence + manual_offset
+speech_duration = max(0.1, duration - lead_silence - trail_silence)
+
+print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_duration:.3f}s")
+
 
 timing_data = load_audio_timing()
-
 paragraph_durations = []
+paragraph_starts = []
+use_explicit_starts = False
 
 if timing_data and timing_data.get('optimized'):
-    print("\n⏱️ Using OPTIMIZED audio timing")
-    
+    print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
     sections = timing_data['sections']
     
-    for i, paragraph in enumerate(paragraphs):
-        para_section = next((s for s in sections if s['name'] == f'paragraph_{i+1}'), None)
+    # Check if the metadata contains absolute start times
+    first_section = sections[0] if sections else {}
+    if 'start' in first_section and 'duration' in first_section:
+        use_explicit_starts = True
+        print("   ✅ Metadata contains absolute start/duration times.")
         
-        if para_section:
-            dur = para_section['duration']
+        for i, paragraph in enumerate(paragraphs):
+            para_section = next((s for s in sections if s.get('name') == f'paragraph_{i+1}'), None)
+            if para_section:
+                # Use exact timings from the TTS provider
+                p_start = float(para_section['start'])
+                p_dur = float(para_section['duration'])
+                paragraph_starts.append(p_start)
+                paragraph_durations.append(p_dur)
+                print(f"   Paragraph {i+1}: start={p_start:.2f}s, dur={p_dur:.2f}s (Metadata)")
+            else:
+                # Fallback for a missing paragraph in metadata
+                est_dur = estimate_duration_fallback(paragraph, speech_duration, paragraphs)
+                paragraph_starts.append(-1) # Mark as estimated
+                paragraph_durations.append(est_dur)
+                print(f"   Paragraph {i+1}: {est_dur:.2f}s (Estimated)")
+
+    else:
+        # If metadata only has durations, not start times
+        print("   ⚠️ Metadata only contains durations, distributing them across speech window.")
+        for i, paragraph in enumerate(paragraphs):
+            para_section = next((s for s in sections if s['name'] == f'paragraph_{i+1}'), None)
+            dur = para_section['duration'] if para_section else estimate_duration_fallback(paragraph, speech_duration, paragraphs)
             paragraph_durations.append(dur)
-            print(f"   Paragraph {i+1}: {dur:.2f}s (from metadata)")
-        else:
-            dur = estimate_duration_fallback(paragraph, duration, paragraphs)
-            paragraph_durations.append(dur)
-            print(f"   Paragraph {i+1}: {dur:.2f}s (estimated)")
-    
-    total_calculated = sum(paragraph_durations)
-    
-    if abs(total_calculated - duration) > 0.5:
-        adjustment_factor = duration / total_calculated if total_calculated > 0 else 1
-        paragraph_durations = [d * adjustment_factor for d in paragraph_durations]
-        print(f"   ✅ Adjusted by factor {adjustment_factor:.4f}")
+        
+        # Normalize durations to fit the speech window perfectly
+        total_calculated = sum(paragraph_durations)
+        if total_calculated > 0:
+            scale_factor = speech_duration / total_calculated
+            paragraph_durations = [d * scale_factor for d in paragraph_durations]
+            print(f"   ✅ Normalized paragraph durations by factor {scale_factor:.4f}")
 
 else:
-    print("\n⚠️ No timing metadata, using word-based estimation")
-    
-    total_words = sum(len(p.split()) for p in paragraphs)
-    
+    print("\n⚠️ No timing metadata, using word-based estimation across speech window.")
+    total_words = sum(len(p.split()) for p in paragraphs if p)
     for paragraph in paragraphs:
         words = len(paragraph.split())
-        if total_words > 0:
-            dur = (words / total_words) * duration
-        else:
-            dur = duration / max(1, len(paragraphs))
-        
+        dur = (words / total_words) * speech_duration if total_words > 0 else speech_duration / max(1, len(paragraphs))
         paragraph_durations.append(max(2.0, dur))
 
-print(f"\n⏱️ Final Paragraph Timings:")
-for i, dur in enumerate(paragraph_durations):
-    print(f"   Paragraph {i+1}: {dur:.2f}s ({len(paragraphs[i].split())} words)")
-
-total_timeline = sum(paragraph_durations)
-print(f"   Total Timeline: {total_timeline:.2f}s")
-print(f"   Audio Duration: {duration:.2f}s")
-print(f"   Drift: {abs(total_timeline - duration)*1000:.0f}ms")
 
 # --- Video Composition with Enhanced Text ---
 
 clips = []
-current_time = 0
+scene_starts = []
 
-print("\n🎬 Building scenes with enhanced text display...")
+# ✅ SYNC FIX: Calculate absolute start times for each scene
+if use_explicit_starts:
+    # Use metadata start times, but offset by the detected silence
+    scene_starts = [start_offset + ps for ps in paragraph_starts]
+else:
+    # Sequentially stack durations, starting after the initial silence
+    current_time = start_offset
+    for dur in paragraph_durations:
+        scene_starts.append(current_time)
+        current_time += dur
 
+print("\n🎬 Building scenes with precise start times...")
 for i, paragraph in enumerate(paragraphs):
+    if i >= len(scene_starts) or i >= len(paragraph_durations):
+        print(f"⚠️ Skipping paragraph {i+1}, timing info missing.")
+        continue
+
+    start_time = scene_starts[i]
     dur = paragraph_durations[i]
-    
     img_idx = min(i, len(scene_images) - 1)
     
-    print(f"🎬 Scene {i+1}/{len(paragraphs)} (duration: {dur:.2f}s)...")
+    print(f"🎬 Scene {i+1}: start={start_time:.2f}s, dur={dur:.2f}s")
     
-    # Use enhanced scene creation
+    # Use enhanced scene creation with precise timing
     clips.extend(create_enhanced_scene(
         scene_images[img_idx], 
         paragraph,
         dur,
-        current_time,
+        start_time, # Pass the absolute start time
         scene_index=i
     ))
-    
-    current_time += dur
 
-# Sync check
+# ✅ SYNC FIX: More accurate sync check
+timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
+speech_end = duration - trail_silence
+final_drift = abs(timeline_end - speech_end)
+
 print(f"\n📊 SYNC CHECK:")
-print(f"   Timeline: {current_time:.2f}s")
-print(f"   Audio: {duration:.2f}s")
-print(f"   Drift: {abs(current_time - duration)*1000:.0f}ms")
+print(f"   Visual Timeline End: {timeline_end:.3f}s")
+print(f"   Speech Audio End:    {speech_end:.3f}s")
+print(f"   Final Drift:         {final_drift*1000:.0f}ms")
 
-if abs(current_time - duration) < 0.05:
+if final_drift < 0.1:
     print(f"   ✅ NEAR-PERFECT SYNC!")
-elif abs(current_time - duration) < 0.5:
+elif final_drift < 0.5:
     print(f"   ✅ Excellent sync")
 else:
-    print(f"   ⚠️ Sync drift detected")
+    print(f"   ⚠️ Sync drift of {final_drift:.2f}s detected. Check paragraph timing.")
 
 print(f"\n🎬 Composing mystery video ({len(clips)} clips)...")
 video = CompositeVideoClip(clips, size=(w, h))
@@ -1132,6 +1205,7 @@ try:
         audio_codec="aac",
         threads=4,
         preset='medium',
+        audio_fps=48000,
         audio_bitrate='192k',
         bitrate='8000k',
         logger=None
