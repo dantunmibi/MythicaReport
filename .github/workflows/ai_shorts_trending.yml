@@ -425,34 +425,25 @@ jobs:
             echo "✅ Video URL: $VIDEO_URL"
           fi
 
-      - name: 🔗 Send to Make.com webhook
+      - name: Send to Make.com webhook
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         run: |
-          if [ -z "${{ secrets.MAKECOM_WEBHOOK_URL }}" ]; then
-            echo "⚠️ Make.com webhook URL not configured, skipping"
-            exit 0
-          fi
-          
           PAYLOAD=$(cat tmp/makecom_payload.json)
           VIDEO_URL="${{ steps.upload_temp.outputs.video_url }}"
-          
+          VIDEO_NAME="${{ steps.find_video.outputs.video_name }}"
           curl -X POST "${{ secrets.MAKECOM_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -H "User-Agent: GitHub-Actions-5AM-Legion" \
-            -d @- <<EOF
-          {
-            "video_url": "$VIDEO_URL",
-            "niche": "mystery",
-            "content_type": "${{ steps.schedule_check.outputs.content_type }}",
-            "metadata": $PAYLOAD,
-            "github": {
-              "run_id": "${{ github.run_id }}",
-              "run_number": "${{ github.run_number }}",
-              "repository": "${{ github.repository }}"
-            }
-          }
-          EOF
-          
+            -d "{
+              \"video_url\": \"$VIDEO_URL\",
+              \"video_name\": \"$VIDEO_NAME\",
+              \"metadata\": $PAYLOAD,
+              \"artifact_url\": \"https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"github\": {
+                \"run_id\": \"${{ github.run_id }}\",
+                \"run_number\": \"${{ github.run_number }}\",
+                \"repository\": \"${{ github.repository }}\"
+              }
+            }"
           echo "✅ Webhook sent to Make.com"
 
       - name: 📚 Organize into mysterious playlists
