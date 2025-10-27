@@ -131,7 +131,7 @@ jobs:
                       scheduled_dt = current_time.replace(hour=hour, minute=minute, second=0, microsecond=0)
                       
                       # Check if the scheduled time is in the past, but within our 1-hour window.
-                      if one_hour_ago <= scheduled_dt <= current_time:
+                      if one_hour_ago >= scheduled_dt >= current_time:
                           should_post = True
                           priority = day_schedule['priority'][i]
                           content_type = day_schedule['content_types'][i]
