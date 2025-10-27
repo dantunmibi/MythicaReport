@@ -342,88 +342,52 @@ jobs:
           VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
           echo "✅ Video validated: $VIDEO_PATH ($VIDEO_SIZE bytes)"
 
-      - name: 📋 Prepare Make.com payload
+      - name: Prepare Make.com payload
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         id: makecom_prep
         run: |
-          TITLE=$(jq -r '.title // "Mystery Short"' tmp/script.json)
-          DESCRIPTION=$(jq -r '.description // ""' tmp/script.json)
-          HASHTAGS=$(jq -r '.hashtags // [] | join(" ")' tmp/script.json)
-          KEY_PHRASE=$(jq -r '.key_phrase // "MYSTERY"' tmp/script.json)
-          
+          TITLE=$(jq -r '.title' tmp/script.json)
+          DESCRIPTION=$(jq -r '.description' tmp/script.json)
+          HASHTAGS=$(jq -r '.hashtags | join(" ")' tmp/script.json)
           VIDEO_PATH="${{ steps.find_video.outputs.video_path }}"
           VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
-          
           YOUTUBE_URL=""
-          TIKTOK_URL=""
-          INSTAGRAM_URL=""
           FACEBOOK_URL=""
-          
           if [ -f tmp/multiplatform_log.json ]; then
-            YOUTUBE_URL=$(jq -r '.[-1].results[] | select(.platform=="youtube") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            TIKTOK_URL=$(jq -r '.[-1].results[] | select(.platform=="tiktok") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            INSTAGRAM_URL=$(jq -r '.[-1].results[] | select(.platform=="instagram") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
-            FACEBOOK_URL=$(jq -r '.[-1].results[] | select(.platform=="facebook") | .url // ""' tmp/multiplatform_log.json 2>/dev/null || echo "")
+            YOUTUBE_URL=$(jq -r '.[-1].results[] | select(.platform=="youtube") | .url // ""' tmp/multiplatform_log.json)
+            FACEBOOK_URL=$(jq -r '.[-1].results[] | select(.platform=="facebook") | .url // ""' tmp/multiplatform_log.json)
           fi
-          
-          cat > tmp/makecom_payload.json <<'PAYLOAD'
+          cat > tmp/makecom_payload.json <<EOF
           {
-            "title": "TITLE_PLACEHOLDER",
-            "description": "DESCRIPTION_PLACEHOLDER",
-            "hashtags": "HASHTAGS_PLACEHOLDER",
-            "key_phrase": "KEY_PHRASE_PLACEHOLDER",
-            "video_name": "VIDEO_NAME_PLACEHOLDER",
-            "video_size_mb": VIDEO_SIZE_PLACEHOLDER,
-            "workflow_run": "WORKFLOW_RUN_PLACEHOLDER",
-            "timestamp": "TIMESTAMP_PLACEHOLDER",
-            "niche": "mystery",
-            "content_type": "CONTENT_TYPE_PLACEHOLDER",
-            "priority": "PRIORITY_PLACEHOLDER",
+            "title": "$TITLE",
+            "description": "$DESCRIPTION",
+            "hashtags": "$HASHTAGS",
+            "video_name": "$(basename $VIDEO_PATH)",
+            "video_size_mb": $(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc),
+            "workflow_run": "${{ github.run_number }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platform_urls": {
-              "youtube": "YOUTUBE_URL_PLACEHOLDER",
-              "tiktok": "TIKTOK_URL_PLACEHOLDER",
-              "instagram": "INSTAGRAM_URL_PLACEHOLDER",
-              "facebook": "FACEBOOK_URL_PLACEHOLDER"
+              "youtube": "$YOUTUBE_URL",
+              "facebook": "$FACEBOOK_URL"
             }
           }
-          PAYLOAD
-          
-          # Use sed to replace placeholders safely
-          sed -i "s|TITLE_PLACEHOLDER|${TITLE}|g" tmp/makecom_payload.json
-          sed -i "s|DESCRIPTION_PLACEHOLDER|${DESCRIPTION}|g" tmp/makecom_payload.json
-          sed -i "s|HASHTAGS_PLACEHOLDER|${HASHTAGS}|g" tmp/makecom_payload.json
-          sed -i "s|KEY_PHRASE_PLACEHOLDER|${KEY_PHRASE}|g" tmp/makecom_payload.json
-          sed -i "s|VIDEO_NAME_PLACEHOLDER|$(basename $VIDEO_PATH)|g" tmp/makecom_payload.json
-          sed -i "s|VIDEO_SIZE_PLACEHOLDER|$(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc)|g" tmp/makecom_payload.json
-          sed -i "s|WORKFLOW_RUN_PLACEHOLDER|${{ github.run_number }}|g" tmp/makecom_payload.json
-          sed -i "s|TIMESTAMP_PLACEHOLDER|$(date -u +%Y-%m-%dT%H:%M:%SZ)|g" tmp/makecom_payload.json
-          sed -i "s|CONTENT_TYPE_PLACEHOLDER|${{ steps.schedule_check.outputs.content_type }}|g" tmp/makecom_payload.json
-          sed -i "s|PRIORITY_PLACEHOLDER|${{ steps.schedule_check.outputs.priority }}|g" tmp/makecom_payload.json
-          sed -i "s|YOUTUBE_URL_PLACEHOLDER|${YOUTUBE_URL}|g" tmp/makecom_payload.json
-          sed -i "s|TIKTOK_URL_PLACEHOLDER|${TIKTOK_URL}|g" tmp/makecom_payload.json
-          sed -i "s|INSTAGRAM_URL_PLACEHOLDER|${INSTAGRAM_URL}|g" tmp/makecom_payload.json
-          sed -i "s|FACEBOOK_URL_PLACEHOLDER|${FACEBOOK_URL}|g" tmp/makecom_payload.json
-          
+          EOF
           echo "✅ Make.com payload prepared"
-          cat tmp/makecom_payload.json
 
-      - name: ☁️ Upload video to Cloudinary
+      - name: Upload video to Cloudinary for Make.com
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         id: upload_temp
         env:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+          VIDEO_TO_UPLOAD: ${{ steps.find_video.outputs.video_path }}
         run: |
-          echo "📤 Uploading to Cloudinary..."
-          export VIDEO_TO_UPLOAD="${{ steps.find_video.outputs.video_path }}"
+          echo "📤 Uploading video to Cloudinary..."
           python .github/scripts/upload_to_cloudinary.py
-          
-          if [ -f tmp/video_url.txt ]; then
-            VIDEO_URL=$(cat tmp/video_url.txt)
-            echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
-            echo "✅ Video URL: $VIDEO_URL"
-          fi
+          VIDEO_URL=$(cat tmp/video_url.txt)
+          echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
+          echo "✅ Video URL: $VIDEO_URL"
 
       - name: Send to Make.com webhook
         if: success() && steps.schedule_check.outputs.should_post == 'true'
