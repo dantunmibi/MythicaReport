@@ -402,7 +402,7 @@ def similar_strings(s1: str, s2: str) -> float:
     return intersection / union if union > 0 else 0.0
 
 
-def filter_and_rank_mystery_trends(trends: List[str]) -> List[Dict[str, Any]]:
+def filter_and_rank_mystery_trends(trends: List[str], history: Dict[str, Any]) -> List[Dict[str, Any]]:
     """Use Gemini to filter and rank mystery trends for viral potential on Mythica Report."""
     
     if not trends:
@@ -410,13 +410,20 @@ def filter_and_rank_mystery_trends(trends: List[str]) -> List[Dict[str, Any]]:
         return get_fallback_mystery_ideas()
     
     print(f"\n🤖 Using Gemini to rank {len(trends)} mystery topics for Mythica Report...")
-    
+
+        # Get the last 20 titles from history to avoid direct repeats
+    previous_titles = [item.get('title', '') for item in history.get('topics', [])[-20:]]
+
     prompt = f"""You are a viral content strategist for "Mythica Report," a YouTube Shorts channel that tells short, chilling mystery stories. Your goal is to find topics that create suspense and make viewers say "What?!".
 
 ANALYZING RAW TRENDING MYSTERY TOPICS (from Google/Reddit/YouTube/Evergreen):
 {chr(10).join(f"- {t}" for t in trends[:30])}
 
-TASK: Select the TOP 5 topics that would make the most compelling, suspenseful, and shareable YouTube Shorts for the "Mythica Report" channel.
+**CRITICAL: DO NOT REPEAT RECENTLY COVERED TOPICS.**
+Here are the titles of the last 20 videos. Avoid generating scripts on these exact topics or very similar ones:
+- {chr(10).join(f"- {title}" for title in previous_titles) if previous_titles else "None yet."}
+
+TASK: Select the TOP 5 topics from the RAW list above that are NOT in the "recently covered" list and would make the most compelling, suspenseful, and shareable YouTube Shorts for the "Mythica Report" channel.
 
 SELECTION CRITERIA (ranked by importance):
 1.  **Hook Potential:** The story must have an incredibly strong, mysterious opening. A question or a shocking statement.
@@ -556,14 +563,21 @@ def save_trending_data(trending_ideas: List[Dict[str, Any]]):
 
 
 if __name__ == "__main__":
-    
+    # >>> ADD THIS LINE <<<
+    from generate_trending_and_script import load_history 
+
     # Get real trending mystery topics
     real_trends = get_real_mystery_trends()
+
+    # >>> ADD THIS LINE <<<
+    history = load_history()
     
     if real_trends:
         # Use Gemini to filter and rank
-        trending_ideas = filter_and_rank_mystery_trends(real_trends)
+        # >>> MODIFY THIS LINE <<<
+        trending_ideas = filter_and_rank_mystery_trends(real_trends, history)
     else:
+        # ... fallback logic
         print("⚠️ Could not fetch real trends, using fallback...")
         trending_ideas = get_fallback_mystery_ideas()
     
