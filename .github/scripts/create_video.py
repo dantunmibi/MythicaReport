@@ -118,19 +118,17 @@ TEMP_FILES = []
 
 def register_temp_file(filepath):
     """Register a temp file for cleanup"""
-    if filepath not in TEMP_FILES:
-        TEMP_FILES.append(filepath)
+    TEMP_FILES.append(filepath)
     return filepath
 
 def cleanup_temp_files():
     """Clean up all registered temp files"""
-    print("🧹 Cleaning up temporary files...")
     for filepath in TEMP_FILES:
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
-        except Exception as e:
-            print(f"   - Could not remove {os.path.basename(filepath)}: {e}")
+        except:
+            pass
 
 # Register cleanup on exit
 atexit.register(cleanup_temp_files)
@@ -894,8 +892,6 @@ def create_dynamic_music_layer(audio_duration, script_data):
     }
     
     primary_scene = category_scene_map.get(mystery_category) or scene_map.get(content_type, 'investigation')
-    music_path = None
-    track_key = None
     
     print(f"   🎯 Scene type: {primary_scene}")
     
@@ -929,6 +925,7 @@ def create_dynamic_music_layer(audio_duration, script_data):
             music_clips = [music] * loops_needed
             music = concatenate_audioclips(music_clips)
         
+        # ✅ FIXED: Use safe trim function
         music = trim_audio_safe(music, audio_duration)
         
         volume_levels = {
@@ -939,6 +936,8 @@ def create_dynamic_music_layer(audio_duration, script_data):
         }
         
         base_volume = volume_levels.get(content_type, 0.18)
+        
+        # Apply volume safely
         music = apply_volumex(music, base_volume)
         
         print(f"   ✅ Mystery music layer created at {base_volume*100:.0f}% volume")
@@ -1002,8 +1001,8 @@ if not os.path.exists(audio_path):
     print(f"❌ Audio not found: {audio_path}")
     raise FileNotFoundError("voice.mp3 missing")
 
+# ✅ FIXED: WAV conversion with proper error handling
 wav_path = os.path.join(TMP, "voice.wav")
-register_temp_file(wav_path)
 try:
     audio_segment = AudioSegment.from_file(audio_path)
     audio_segment.export(wav_path, format="wav")
@@ -1017,72 +1016,81 @@ audio = AudioFileClip(working_audio_path)
 duration = audio.duration
 print(f"🎵 Audio Duration: {duration:.2f}s")
 
+# ✅ SYNC FIX: Detect silence and define the actual speech window
 lead_silence, trail_silence = detect_leading_trailing_silence(working_audio_path)
-manual_offset = float(os.getenv("SYNC_OFFSET_S", "0.0"))
+manual_offset = float(os.getenv("SYNC_OFFSET_S", "0.0")) # Optional fine-tuning via env var
 start_offset = lead_silence + manual_offset
 speech_duration = max(0.1, duration - lead_silence - trail_silence)
 
 print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_duration:.3f}s")
 
+# ✅ FIXED: Simplified and robust timing calculation
+# Replace the timing calculation section (around line 1130-1180) with:
 
-# ==============================================================================
-# ==================== ✅ START OF AUDIO SYNC FIX ✅ =========================
-# ==============================================================================
-
-print("\n⏱️ Calculating paragraph timings...")
 timing_data = load_audio_timing()
 paragraph_durations = []
-timing_valid = False
+scene_starts = []
 
-# 1. Attempt to use pre-calculated, optimized timing data from TTS
+# Check if timing data is valid and has enough sections
+timing_valid = False
 if timing_data and timing_data.get('optimized'):
     sections = timing_data.get('sections', [])
+    
+    # We need at least as many sections as paragraphs for valid timing
     if len(sections) >= len(paragraphs):
-        is_complete = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
-        if is_complete:
+        # Check if all needed sections have proper timing info
+        has_complete_timing = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
+        if has_complete_timing:
             timing_valid = True
-            print("   -> Using OPTIMIZED audio timing from metadata.")
-            for i in range(len(paragraphs)):
+            print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
+            for i, paragraph in enumerate(paragraphs):
+                scene_starts.append(sections[i]['start'] + start_offset)
                 paragraph_durations.append(sections[i]['duration'])
-        else:
-            print("   -> WARNING: Timing metadata is incomplete. Falling back.")
-    else:
-        print(f"   -> WARNING: Timing data mismatch ({len(sections)} sections for {len(paragraphs)} paragraphs). Falling back.")
+                print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={paragraph_durations[-1]:.2f}s")
+    
+    # If we have fewer sections than paragraphs, invalidate timing
+    if len(sections) < len(paragraphs):
+        print(f"\n⚠️ Timing mismatch: {len(sections)} sections but {len(paragraphs)} paragraphs")
+        print("   Falling back to proportional distribution...")
+        timing_valid = False
 
-# 2. Fallback to proportional timing if optimized data is invalid or missing
+# Fallback to proportional timing if no valid timing data
 if not timing_valid:
-    print("   -> Using proportional timing based on word count.")
+    print("\n📊 Using proportional timing based on word count...")
     total_words = sum(len(p.split()) for p in paragraphs if p)
-    for paragraph in paragraphs:
+    current_time = start_offset
+    
+    for i, paragraph in enumerate(paragraphs):
+        scene_starts.append(current_time)
+        
         if total_words > 0:
             word_count = len(paragraph.split())
+            # Calculate proportional duration with minimum time
             dur = (word_count / total_words) * speech_duration
+            # Ensure minimum duration for readability
+            dur = max(2.0, dur)
         else:
             dur = speech_duration / max(1, len(paragraphs))
-        paragraph_durations.append(max(2.0, dur))
+        
+        paragraph_durations.append(dur)
+        current_time += dur
+        
+        print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
 
-# 3. Normalize durations to perfectly match the total speech duration
-total_calculated_duration = sum(paragraph_durations)
-if total_calculated_duration > 0 and abs(total_calculated_duration - speech_duration) > 0.01:
-    scale_factor = speech_duration / total_calculated_duration
+# Normalize to fit speech window exactly
+total_calculated = sum(paragraph_durations)
+if total_calculated > 0 and abs(total_calculated - speech_duration) > 0.5:
+    scale_factor = speech_duration / total_calculated
     paragraph_durations = [d * scale_factor for d in paragraph_durations]
-    print(f"   -> Durations normalized to speech window by factor {scale_factor:.3f}")
-
-# 4. --- THE CRUCIAL FIX ---
-#    Recalculate scene start times based on the *final, normalized* durations.
-print("   -> Building final, synchronized timeline...")
-scene_starts = []
-current_time = start_offset
-for i, dur in enumerate(paragraph_durations):
-    scene_starts.append(current_time)
-    print(f"      Paragraph {i+1}: start={current_time:.2f}s, dur={dur:.2f}s")
-    current_time += dur
-
-# ==============================================================================
-# ===================== ✅ END OF AUDIO SYNC FIX ✅ ==========================
-# ==============================================================================
-
-
+    
+    # Recalculate scene starts
+    current_time = start_offset
+    scene_starts = []
+    for dur in paragraph_durations:
+        scene_starts.append(current_time)
+        current_time += dur
+    
+    print(f"   ✅ Normalized timings by factor {scale_factor:.3f}")
 # --- Video Composition with Enhanced Text ---
 
 clips = []
@@ -1099,6 +1107,7 @@ for i, paragraph in enumerate(paragraphs):
     
     print(f"🎬 Scene {i+1}: start={start_time:.2f}s, dur={dur:.2f}s")
     
+    # Use enhanced scene creation with precise timing
     clips.extend(create_enhanced_scene(
         scene_images[img_idx], 
         paragraph,
@@ -1167,10 +1176,11 @@ try:
         ffmpeg_params=[
             '-pix_fmt', 'yuv420p'  # THE MOST IMPORTANT FIX for player compatibility
         ]
+        # REMOVED: logger=None to allow for better debug output on GitHub Actions
     )
 
     final_time = scene_starts[-1] + paragraph_durations[-1] if scene_starts else duration
-    sync_status = "NEAR-PERFECT" if abs(final_time - speech_end) < 0.1 else "EXCELLENT" if abs(final_time - speech_end) < 0.5 else "GOOD"
+    sync_status = "NEAR-PERFECT" if abs(final_time - duration) < 0.05 else "EXCELLENT" if abs(final_time - duration) < 0.5 else "GOOD"
 
     print(f"\n✅ MYSTERY VIDEO COMPLETE!")
     print(f"   Path: {OUT}")
@@ -1187,7 +1197,7 @@ try:
         print(f"   ✅ Within YouTube Shorts limit ({60 - duration:.2f}s buffer)")
 
     print(f"   Size: {os.path.getsize(OUT) / (1024*1024):.2f} MB")
-    print(f"   Sync Status: {sync_status} ({abs(final_time - speech_end)*1000:.0f}ms drift)")
+    print(f"   Sync Status: {sync_status} ({abs(final_time - duration)*1000:.0f}ms drift)")
     print(f"   Features:")
     print(f"      ✓ Film noir aesthetic")
     print(f"      ✓ Heavy vignette + film grain")
@@ -1212,8 +1222,9 @@ except Exception as e:
     raise
 
 finally:
-    print("🧹 Finalizing...")
-    # Clean up temp files is handled by atexit
+    print("🧹 Cleanup...")
+    # Clean up temp files
+    cleanup_temp_files()
     
     # Close all clips
     try:
