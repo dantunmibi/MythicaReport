@@ -369,12 +369,29 @@ jobs:
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
         run: python .github/scripts/upload_multiplatform.py
 
+      - name: 🗜️ Compress video for Cloudinary/Make.com
+        if: steps.schedule_check.outputs.should_post == 'true'
+        id: compress_video
+        run: |
+          echo "Original video (for YouTube/FB):"
+          ls -lh tmp/short.mp4
+
+          # Create a separate, highly compressed version for Cloudinary
+          ffmpeg -i tmp/short.mp4 -c:v libx264 -preset veryfast -crf 28 -b:v 800k -c:a aac -b:a 128k -y tmp/short_compressed.mp4
+          
+          echo "Compressed video (for Cloudinary):"
+          ls -lh tmp/short_compressed.mp4
+          
+          # Output the path to the compressed file for the next step
+          COMPRESSED_PATH=$(realpath tmp/short_compressed.mp4)
+          echo "compressed_path=$COMPRESSED_PATH" >> $GITHUB_OUTPUT
+
       - name: 🔍 Find actual video file
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         id: find_video
         run: |
-          if [ -f tmp/short.mp4 ]; then
-            VIDEO_PATH="tmp/short.mp4"
+          if [ -f tmp/short_compressed.mp4 ]; then
+            VIDEO_PATH="tmp/short_compressed.mp4"
           else
             VIDEO_PATH=$(find tmp -name "*.mp4" -type f | head -n 1)
           fi
@@ -430,9 +447,10 @@ jobs:
           CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
-          VIDEO_TO_UPLOAD: ${{ steps.find_video.outputs.video_path }}
+          # ✅ CRITICAL CHANGE: Use the path from the compression step
+          VIDEO_TO_UPLOAD: ${{ steps.compress_video.outputs.compressed_path }}
         run: |
-          echo "📤 Uploading video to Cloudinary..."
+          echo "📤 Uploading COMPRESSED video to Cloudinary..."
           python .github/scripts/upload_to_cloudinary.py
           VIDEO_URL=$(cat tmp/video_url.txt)
           echo "video_url=$VIDEO_URL" >> $GITHUB_OUTPUT
