@@ -997,10 +997,10 @@ print("🔍 Generating mystery scenes...")
 scene_images = []
 
 try:
-    num_scenes = min(4, len(paragraphs))
+    num_scenes = min(len(paragraphs), 4) if paragraphs else 0
     
     for i in range(num_scenes):
-        paragraph = paragraphs[i] if i < len(paragraphs) else ""
+        paragraph = paragraphs[i]
         visual_prompt = visual_prompts[i] if i < len(visual_prompts) else f"Noir mystery scene: {paragraph[:100]}"
         
         visual_prompt = enhance_visual_prompt_for_mystery(visual_prompt, i, mystery_category)
@@ -1019,18 +1019,17 @@ try:
     
 except Exception as e:
     print(f"⚠️ Image generation error: {e}")
-    scene_images = [None] * 4
+    scene_images = [None] * len(paragraphs)
 
 print(f"🔍 Validating {len(scene_images)} scenes...")
 for i in range(len(scene_images)):
-    img = scene_images[i] if i < len(scene_images) else None
+    img = scene_images[i]
     
     if not img or not os.path.exists(img) or os.path.getsize(img) < 1000:
         print(f"⚠️ Scene {i} invalid, creating noir gradient...")
         fallback_path = os.path.join(TMP, f"scene_fallback_{i}.jpg")
         create_noir_gradient(fallback_path, i, w, h)
-        if i < len(scene_images):
-            scene_images[i] = fallback_path
+        scene_images[i] = fallback_path
 
 print(f"✅ All mystery scenes validated")
 
@@ -1063,90 +1062,74 @@ speech_duration = max(0.1, duration - lead_silence - trail_silence)
 
 print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_duration:.3f}s")
 
-# ✅ FIXED: Simplified and robust timing calculation
-# Replace the timing calculation section (around line 1130-1180) with:
 
-# ✅ ENHANCED: Try to load enhanced timing first
-enhanced_timing = load_enhanced_timing()
-
-# Get paragraphs (your existing code)
-full_script = data.get('script', '')  # ✅ FIXED: Use 'data' not 'script_data'
-if not full_script:
-    bullets = data.get('bullets', [])
-    cta = data.get('cta', '')
-    full_script = f"{data.get('hook', '')}\n\n{' '.join(bullets)}\n\n{cta}"
-
-paragraphs = [p.strip() for p in full_script.split('\n\n') if p.strip()]
+# ✅✅✅ --- FINAL SYNC FIX --- ✅✅✅
+# This entire block replaces the previous timing logic to be fully robust.
 
 paragraph_durations = []
 scene_starts = []
 
-# ✅ NEW: Use enhanced timing if available
+# Try to load pre-calculated, optimized timing first
+enhanced_timing = load_enhanced_timing()
+
+# Validate enhanced timing against current script paragraphs
 if enhanced_timing and enhanced_timing.get('sections'):
-    print("\n⏱️ Using ENHANCED timing from audio_timing.json...")
-    
     sections = enhanced_timing['sections']
-    
-    # Extract timings from sections
+    if len(sections) != len(paragraphs):
+        print(f"⚠️ Timing/paragraph mismatch: {len(sections)} sections vs {len(paragraphs)} paragraphs. Using robust fallback.")
+        enhanced_timing = None # Invalidate and force fallback
+
+if enhanced_timing:
+    print("\n⏱️ Using PRE-CALCULATED timing from audio_timing.json...")
+    sections = enhanced_timing['sections']
     for section in sections:
         scene_starts.append(section['start'])
         paragraph_durations.append(section['duration'])
     
-    # Ensure we have matching counts
-    if len(sections) != len(paragraphs):
-        print(f"⚠️ Timing/paragraph mismatch: {len(sections)} sections vs {len(paragraphs)} paragraphs")
-        
-        # Adjust to use minimum count
-        min_count = min(len(sections), len(paragraphs))
-        scene_starts = scene_starts[:min_count]
-        paragraph_durations = paragraph_durations[:min_count]
-        paragraphs = paragraphs[:min_count]
-        
-        print(f"   Adjusted to use {min_count} sections")
-    
-    # Display timing info
     for i in range(len(paragraphs)):
         print(f"   Paragraph {i+1}: start={scene_starts[i]:.2f}s, dur={paragraph_durations[i]:.2f}s")
-    
+
 else:
-    # Fallback: Use proportional timing (your existing code)
-    print("\n📊 Using fallback proportional timing...")
+    # If enhanced timing fails or is mismatched, use this robust local fallback
+    print("\n📊 Using ROBUST proportional fallback timing (based on local speech window)...")
     
     total_words = sum(len(p.split()) for p in paragraphs if p)
-    current_time = 0.0
-    
-    for i, paragraph in enumerate(paragraphs):
-        scene_starts.append(current_time)
-        
-        if total_words > 0:
+    current_time = start_offset # CRITICAL: Start visuals when speech starts
+
+    if total_words > 0:
+        # Distribute the speech duration proportionally among paragraphs
+        for i, paragraph in enumerate(paragraphs):
             word_count = len(paragraph.split())
-            dur = (word_count / total_words) * duration
-            dur = max(2.0, dur)
-        else:
-            dur = duration / max(1, len(paragraphs))
-        
-        paragraph_durations.append(dur)
-        current_time += dur
-        
-        print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
-    
-    # Normalize to fit duration exactly
-    total_calculated = sum(paragraph_durations)
-    if total_calculated > 0 and abs(total_calculated - duration) > 0.5:
-        scale_factor = duration / total_calculated
+            # CRITICAL: Base duration on SPEECH duration, not total duration
+            dur = (word_count / total_words) * speech_duration 
+            paragraph_durations.append(dur)
+    else:
+        # Fallback for scripts with no words (unlikely but safe)
+        dur_per_para = speech_duration / max(1, len(paragraphs))
+        paragraph_durations = [dur_per_para] * len(paragraphs)
+            
+    # Normalize the visuals to fit the speech window EXACTLY
+    total_calculated_fallback = sum(paragraph_durations)
+    if total_calculated_fallback > 0:
+        scale_factor = speech_duration / total_calculated_fallback
         paragraph_durations = [d * scale_factor for d in paragraph_durations]
         
-        current_time = 0.0
-        scene_starts = []
-        for dur in paragraph_durations:
-            scene_starts.append(current_time)
-            current_time += dur
-        
-        print(f"   ✅ Normalized by factor {scale_factor:.3f}")
+    # Now, calculate the final start times
+    for dur in paragraph_durations:
+        scene_starts.append(current_time)
+        current_time += dur
+    
+    print(f"   ✅ Normalized visuals to fit speech window.")
+    for i, (start, dur) in enumerate(zip(scene_starts, paragraph_durations)):
+         print(f"   Paragraph {i+1}: start={start:.2f}s, dur={dur:.2f}s")
+
+# ✅✅✅ --- END FINAL SYNC FIX --- ✅✅✅
+
 
 # ✅ ENHANCED SYNC CHECK
 timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
-final_drift = abs(timeline_end - duration)
+# Compare visual timeline against total audio duration
+final_drift = abs(duration - timeline_end)
 
 print(f"\n📊 ENHANCED SYNC CHECK:")
 print(f"   Visual Timeline End: {timeline_end:.3f}s")
@@ -1155,30 +1138,26 @@ print(f"   Final Drift:         {final_drift*1000:.0f}ms")
 
 if final_drift < 0.05:
     print(f"   ✅ FRAME-PERFECT SYNC!")
-elif final_drift < 0.1:
+elif final_drift < 0.2:
     print(f"   ✅ Excellent sync")
 elif final_drift < 0.5:
     print(f"   ✅ Good sync")
 else:
-    print(f"   ⚠️ Sync drift detected - check timing")
+    print(f"   ⚠️ Sync drift detected - check timing (Drift: {final_drift:.3f}s)")
 
 # Build visual clips for each paragraph/section
 clips = []
 
 # Fallback if timing failed for some reason
 if not scene_starts or not paragraph_durations:
+    print("   ⚠️ CRITICAL: Timing calculation failed completely. Using single scene.")
     scene_starts = [0.0]
     paragraph_durations = [duration]
     paragraphs = [full_script]
 
 for i, (start, dur) in enumerate(zip(scene_starts, paragraph_durations)):
     # Use scene image if available, else reuse last image, else None (ColorClip fallback in create_enhanced_scene)
-    if i < len(scene_images) and scene_images[i]:
-        img_path = scene_images[i]
-    elif scene_images:
-        img_path = scene_images[-1]  # reuse last image for extra sections
-    else:
-        img_path = None
+    img_path = scene_images[i] if i < len(scene_images) else (scene_images[-1] if scene_images else None)
 
     text = paragraphs[i] if i < len(paragraphs) else ""
     scene_clips = create_enhanced_scene(img_path, text, dur, start, i)
@@ -1234,7 +1213,6 @@ try:
         ffmpeg_params=[
             '-pix_fmt', 'yuv420p'  # THE MOST IMPORTANT FIX for player compatibility
         ]
-        # REMOVED: logger=None to allow for better debug output on GitHub Actions
     )
 
     final_time = scene_starts[-1] + paragraph_durations[-1] if scene_starts else duration
