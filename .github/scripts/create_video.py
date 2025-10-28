@@ -1148,7 +1148,7 @@ else:
 timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
 final_drift = abs(timeline_end - duration)
 
-clips[]
+clips = []
 
 print(f"\n📊 ENHANCED SYNC CHECK:")
 print(f"   Visual Timeline End: {timeline_end:.3f}s")
