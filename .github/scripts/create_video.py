@@ -81,6 +81,45 @@ def apply_volumex(clip, factor):
             except:
                 return clip
 
+def load_enhanced_timing():
+    """
+    ✅ NEW: Load enhanced timing data from audio_timing.json
+    Returns timing_data dict or None if not available
+    """
+    timing_path = os.path.join(TMP, "audio_timing.json")
+    
+    if not os.path.exists(timing_path):
+        print("⚠️ No enhanced timing file found")
+        return None
+    
+    try:
+        with open(timing_path, 'r') as f:
+            timing_data = json.load(f)
+        
+        if not timing_data.get('optimized'):
+            print("⚠️ Timing data not marked as optimized")
+            return None
+        
+        method = timing_data.get('timing_method', 'unknown')
+        sections = timing_data.get('sections', [])
+        
+        if method == 'enhanced_proportional':
+            print(f"✅ Loaded ENHANCED timing (silence-aware, word-proportional)")
+        else:
+            print(f"✅ Loaded timing method: {method}")
+        
+        print(f"   Total duration: {timing_data.get('total_duration', 0):.2f}s")
+        print(f"   Speech duration: {timing_data.get('speech_duration', 0):.2f}s")
+        print(f"   Sections: {len(sections)}")
+        
+        return timing_data
+        
+    except Exception as e:
+        print(f"⚠️ Failed to load enhanced timing: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
 def trim_audio_safe(audio_clip, target_duration):
     """✅ FIXED: Safely trim audio to target duration"""
     try:
@@ -1027,111 +1066,101 @@ print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_
 # ✅ FIXED: Simplified and robust timing calculation
 # Replace the timing calculation section (around line 1130-1180) with:
 
-timing_data = load_audio_timing()
+# ✅ ENHANCED: Try to load enhanced timing first
+enhanced_timing = load_enhanced_timing()
+
+# Get paragraphs (your existing code)
+full_script = script_data.get('script', '')
+if not full_script:
+    bullets = script_data.get('bullets', [])
+    cta = script_data.get('cta', '')
+    full_script = f"{script_data.get('hook', '')}\n\n{' '.join(bullets)}\n\n{cta}"
+
+paragraphs = [p.strip() for p in full_script.split('\n\n') if p.strip()]
+
 paragraph_durations = []
 scene_starts = []
 
-# Check if timing data is valid and has enough sections
-timing_valid = False
-if timing_data and timing_data.get('optimized'):
-    sections = timing_data.get('sections', [])
+# ✅ NEW: Use enhanced timing if available
+if enhanced_timing and enhanced_timing.get('sections'):
+    print("\n⏱️ Using ENHANCED timing from audio_timing.json...")
     
-    # We need at least as many sections as paragraphs for valid timing
-    if len(sections) >= len(paragraphs):
-        # Check if all needed sections have proper timing info
-        has_complete_timing = all('start' in s and 'duration' in s for s in sections[:len(paragraphs)])
-        if has_complete_timing:
-            timing_valid = True
-            print("\n⏱️ Using OPTIMIZED audio timing from metadata...")
-            for i, paragraph in enumerate(paragraphs):
-                scene_starts.append(sections[i]['start'] + start_offset)
-                paragraph_durations.append(sections[i]['duration'])
-                print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={paragraph_durations[-1]:.2f}s")
+    sections = enhanced_timing['sections']
     
-    # If we have fewer sections than paragraphs, invalidate timing
-    if len(sections) < len(paragraphs):
-        print(f"\n⚠️ Timing mismatch: {len(sections)} sections but {len(paragraphs)} paragraphs")
-        print("   Falling back to proportional distribution...")
-        timing_valid = False
-
-# Fallback to proportional timing if no valid timing data
-if not timing_valid:
-    print("\n📊 Using proportional timing based on word count...")
+    # Extract timings from sections
+    for section in sections:
+        scene_starts.append(section['start'])
+        paragraph_durations.append(section['duration'])
+    
+    # Ensure we have matching counts
+    if len(sections) != len(paragraphs):
+        print(f"⚠️ Timing/paragraph mismatch: {len(sections)} sections vs {len(paragraphs)} paragraphs")
+        
+        # Adjust to use minimum count
+        min_count = min(len(sections), len(paragraphs))
+        scene_starts = scene_starts[:min_count]
+        paragraph_durations = paragraph_durations[:min_count]
+        paragraphs = paragraphs[:min_count]
+        
+        print(f"   Adjusted to use {min_count} sections")
+    
+    # Display timing info
+    for i in range(len(paragraphs)):
+        print(f"   Paragraph {i+1}: start={scene_starts[i]:.2f}s, dur={paragraph_durations[i]:.2f}s")
+    
+else:
+    # Fallback: Use proportional timing (your existing code)
+    print("\n📊 Using fallback proportional timing...")
+    
     total_words = sum(len(p.split()) for p in paragraphs if p)
-    current_time = start_offset
+    current_time = 0.0
     
     for i, paragraph in enumerate(paragraphs):
         scene_starts.append(current_time)
         
         if total_words > 0:
             word_count = len(paragraph.split())
-            # Calculate proportional duration with minimum time
-            dur = (word_count / total_words) * speech_duration
-            # Ensure minimum duration for readability
+            dur = (word_count / total_words) * duration
             dur = max(2.0, dur)
         else:
-            dur = speech_duration / max(1, len(paragraphs))
+            dur = duration / max(1, len(paragraphs))
         
         paragraph_durations.append(dur)
         current_time += dur
         
         print(f"   Paragraph {i+1}: start={scene_starts[-1]:.2f}s, dur={dur:.2f}s")
-
-# Normalize to fit speech window exactly
-total_calculated = sum(paragraph_durations)
-if total_calculated > 0 and abs(total_calculated - speech_duration) > 0.5:
-    scale_factor = speech_duration / total_calculated
-    paragraph_durations = [d * scale_factor for d in paragraph_durations]
     
-    # Recalculate scene starts
-    current_time = start_offset
-    scene_starts = []
-    for dur in paragraph_durations:
-        scene_starts.append(current_time)
-        current_time += dur
-    
-    print(f"   ✅ Normalized timings by factor {scale_factor:.3f}")
-# --- Video Composition with Enhanced Text ---
+    # Normalize to fit duration exactly
+    total_calculated = sum(paragraph_durations)
+    if total_calculated > 0 and abs(total_calculated - duration) > 0.5:
+        scale_factor = duration / total_calculated
+        paragraph_durations = [d * scale_factor for d in paragraph_durations]
+        
+        current_time = 0.0
+        scene_starts = []
+        for dur in paragraph_durations:
+            scene_starts.append(current_time)
+            current_time += dur
+        
+        print(f"   ✅ Normalized by factor {scale_factor:.3f}")
 
-clips = []
-
-print("\n🎬 Building scenes with precise start times...")
-for i, paragraph in enumerate(paragraphs):
-    if i >= len(scene_starts) or i >= len(paragraph_durations):
-        print(f"⚠️ Skipping paragraph {i+1}, timing info missing.")
-        continue
-
-    start_time = scene_starts[i]
-    dur = paragraph_durations[i]
-    img_idx = min(i, len(scene_images) - 1)
-    
-    print(f"🎬 Scene {i+1}: start={start_time:.2f}s, dur={dur:.2f}s")
-    
-    # Use enhanced scene creation with precise timing
-    clips.extend(create_enhanced_scene(
-        scene_images[img_idx], 
-        paragraph,
-        dur,
-        start_time,
-        scene_index=i
-    ))
-
-# ✅ SYNC CHECK
+# ✅ ENHANCED SYNC CHECK
 timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
-speech_end = duration - trail_silence
-final_drift = abs(timeline_end - speech_end)
+final_drift = abs(timeline_end - duration)
 
-print(f"\n📊 SYNC CHECK:")
+print(f"\n📊 ENHANCED SYNC CHECK:")
 print(f"   Visual Timeline End: {timeline_end:.3f}s")
-print(f"   Speech Audio End:    {speech_end:.3f}s")
+print(f"   Audio Duration:      {duration:.3f}s")
 print(f"   Final Drift:         {final_drift*1000:.0f}ms")
 
-if final_drift < 0.1:
-    print(f"   ✅ NEAR-PERFECT SYNC!")
-elif final_drift < 0.5:
+if final_drift < 0.05:
+    print(f"   ✅ FRAME-PERFECT SYNC!")
+elif final_drift < 0.1:
     print(f"   ✅ Excellent sync")
+elif final_drift < 0.5:
+    print(f"   ✅ Good sync")
 else:
-    print(f"   ⚠️ Sync drift of {final_drift:.2f}s detected. Check paragraph timing.")
+    print(f"   ⚠️ Sync drift detected - check timing")
 
 print(f"\n🎬 Composing mystery video ({len(clips)} clips)...")
 video = CompositeVideoClip(clips, size=(w, h))

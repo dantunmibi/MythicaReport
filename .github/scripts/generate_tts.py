@@ -15,7 +15,7 @@ Features:
 import os
 import json
 from pathlib import Path
-import subprocess
+import subprocess   
 import re
 
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
@@ -456,8 +456,7 @@ def generate_audio_with_fallback(full_text, output_path):
 
 def optimize_audio_timing(audio_path, expected_duration, paragraphs):
     """
-    Optimize audio timing for perfect sync with video
-    ✅ FIXED: Ensure we create timing for ALL paragraphs
+    ✅ ENHANCED: Optimize audio timing with silence detection and word-proportional distribution
     """
     
     try:
@@ -472,16 +471,60 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
         
         actual_duration = float(result.stdout.strip())
         
-        print(f"\n⏱️ Audio Timing Analysis:")
-        print(f"   Expected: {expected_duration:.2f}s")
-        print(f"   Actual: {actual_duration:.2f}s")
-        print(f"   Difference: {abs(actual_duration - expected_duration):.2f}s")
-        print(f"   Paragraphs to time: {len(paragraphs)}")
+        # ✅ NEW: Detect silence at start/end using ffmpeg
+        lead_silence = 0.0
+        trail_silence = 0.0
         
-        # ✅ CRITICAL: Ensure we have paragraphs
+        try:
+            silence_cmd = [
+                'ffmpeg', '-i', audio_path,
+                '-af', 'silencedetect=noise=-40dB:d=0.1',
+                '-f', 'null', '-'
+            ]
+            silence_result = subprocess.run(silence_cmd, capture_output=True, text=True, stderr=subprocess.STDOUT)
+            
+            silence_starts = []
+            silence_ends = []
+            
+            for line in silence_result.stdout.split('\n'):
+                if 'silence_start' in line:
+                    match = re.search(r'silence_start: ([\d.]+)', line)
+                    if match:
+                        silence_starts.append(float(match.group(1)))
+                elif 'silence_end' in line:
+                    match = re.search(r'silence_end: ([\d.]+)', line)
+                    if match:
+                        silence_ends.append(float(match.group(1)))
+            
+            # Leading silence: if starts near 0
+            if silence_ends and silence_starts and silence_starts[0] < 0.1:
+                lead_silence = silence_ends[0]
+            
+            # Trailing silence: if ends near duration
+            if silence_starts:
+                last_silence_start = silence_starts[-1]
+                if actual_duration - last_silence_start < 2.0:
+                    trail_silence = actual_duration - last_silence_start
+            
+            print(f"🔧 Silence Detection: Lead={lead_silence:.3f}s, Trail={trail_silence:.3f}s")
+            
+        except Exception as e:
+            print(f"⚠️ Silence detection failed: {e}, continuing without it")
+        
+        # Calculate speech window
+        speech_start = lead_silence
+        speech_duration = actual_duration - lead_silence - trail_silence
+        
+        print(f"\n⏱️ Enhanced Audio Timing Analysis:")
+        print(f"   Total duration: {actual_duration:.2f}s")
+        print(f"   Expected: {expected_duration:.2f}s")
+        print(f"   Speech window: {speech_start:.2f}s to {speech_start + speech_duration:.2f}s")
+        print(f"   Speech duration: {speech_duration:.2f}s")
+        print(f"   Paragraphs: {len(paragraphs)}")
+        
+        # Create section timings
         if not paragraphs or len(paragraphs) == 0:
-            print("❌ No paragraphs provided for timing!")
-            # Create a single section for the whole audio
+            print("❌ No paragraphs provided!")
             section_timings = [{
                 'name': 'full_script',
                 'text_preview': 'Full script',
@@ -491,27 +534,29 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
                 'words': 0
             }]
         else:
-            # Calculate section timings based on word count distribution
+            # ✅ ENHANCED: Word-proportional timing
             total_words = sum(len(p.split()) for p in paragraphs)
             
             if total_words == 0:
-                print("⚠️ No words found in paragraphs!")
                 total_words = 1
             
-            current_time = 0.0
+            current_time = speech_start
             section_timings = []
             
             for i, paragraph in enumerate(paragraphs):
                 para_words = len(paragraph.split())
                 
-                # Proportional duration based on word count
+                # Calculate proportional duration based on word count
                 if total_words > 0:
-                    word_duration = (para_words / total_words) * actual_duration
+                    word_duration = (para_words / total_words) * speech_duration
                 else:
-                    word_duration = actual_duration / len(paragraphs)
+                    word_duration = speech_duration / len(paragraphs)
                 
-                # Ensure minimum duration for readability
-                section_duration = max(1.0, word_duration)
+                # Ensure minimum duration for readability (1.5s base + 0.15s per word)
+                min_duration = 1.5 + (para_words * 0.15)
+                
+                # Use the larger of proportional or minimum
+                section_duration = max(word_duration, min_duration)
                 
                 section_timings.append({
                     'name': f'paragraph_{i+1}',
@@ -524,35 +569,34 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
                 
                 current_time += section_duration
             
-            # ✅ NORMALIZE to match actual duration exactly
+            # ✅ Normalize to fit speech window EXACTLY
             if section_timings:
                 total_timed = sum(s['duration'] for s in section_timings)
-                if total_timed > 0 and abs(total_timed - actual_duration) > 0.1:
-                    scale = actual_duration / total_timed
-                    current_time = 0.0
+                if total_timed > 0 and abs(total_timed - speech_duration) > 0.1:
+                    scale = speech_duration / total_timed
+                    current_time = speech_start
                     for timing in section_timings:
                         timing['duration'] *= scale
                         timing['start'] = current_time
                         timing['end'] = current_time + timing['duration']
                         current_time = timing['end']
+                    print(f"   ✅ Normalized by scale factor: {scale:.3f}")
         
-        print(f"\n📊 Optimized Section Timings ({len(section_timings)} sections):")
+        print(f"\n📊 Enhanced Section Timings ({len(section_timings)} sections):")
         for i, timing in enumerate(section_timings):
-            if i < 5 or i >= len(section_timings) - 1:  # Show first 5 and last
+            if i < 5 or i >= len(section_timings) - 1:
                 print(f"   {timing['name']}: {timing['start']:.2f}s - {timing['end']:.2f}s "
-                      f"({timing['words']} words, {timing['duration']:.2f}s duration)")
-                preview = timing['text_preview'][:80] if 'text_preview' in timing else ''
-                if preview:
-                    print(f"      Preview: {preview}")
+                      f"({timing['words']} words, {timing['duration']:.2f}s)")
         
         if len(section_timings) > 6:
             print(f"   ... ({len(section_timings) - 6} more sections)")
         
-        # ✅ VALIDATE before saving
+        # Validate
         if len(section_timings) == 0:
-            print("❌ No timing sections created! Creating fallback...")
+            print("❌ No sections created! Using fallback...")
             section_timings = [{
                 'name': 'full_script',
+                'text_preview': 'Full script',
                 'start': 0.0,
                 'duration': actual_duration,
                 'end': actual_duration,
@@ -564,16 +608,21 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
         with open(timing_path, 'w') as f:
             json.dump({
                 'total_duration': actual_duration,
+                'speech_start': speech_start,
+                'speech_duration': speech_duration,
+                'lead_silence': lead_silence,
+                'trail_silence': trail_silence,
                 'sections': section_timings,
                 'paragraph_count': len(paragraphs),
                 'section_count': len(section_timings),
                 'optimized': True,
+                'timing_method': 'enhanced_proportional',
                 'niche': 'mystery'
             }, f, indent=2)
         
-        print(f"\n✅ Timing optimization complete")
-        print(f"   Sections created: {len(section_timings)}")
-        print(f"   Total duration: {actual_duration:.2f}s")
+        print(f"\n✅ Enhanced timing optimization complete")
+        print(f"   Method: Word-proportional with silence detection")
+        print(f"   Sections: {len(section_timings)}")
         print(f"   Saved to: {timing_path}")
         
         return section_timings
@@ -583,7 +632,7 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
         import traceback
         traceback.print_exc()
         
-        # Return fallback timing
+        # Return basic fallback
         if 'actual_duration' in locals():
             duration = actual_duration
         else:
@@ -591,12 +640,12 @@ def optimize_audio_timing(audio_path, expected_duration, paragraphs):
             
         return [{
             'name': 'full_script',
+            'text_preview': 'Full script',
             'start': 0.0,
             'duration': duration,
             'end': duration,
             'words': len(' '.join(paragraphs).split()) if paragraphs else 0
         }]
-
 
 def save_metadata(audio_path, script_data, full_text, estimated_duration):
     """Save audio metadata for video creation"""
