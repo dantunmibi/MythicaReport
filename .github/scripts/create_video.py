@@ -1148,8 +1148,6 @@ else:
 timeline_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
 final_drift = abs(timeline_end - duration)
 
-clips = []
-
 print(f"\n📊 ENHANCED SYNC CHECK:")
 print(f"   Visual Timeline End: {timeline_end:.3f}s")
 print(f"   Audio Duration:      {duration:.3f}s")
@@ -1163,6 +1161,35 @@ elif final_drift < 0.5:
     print(f"   ✅ Good sync")
 else:
     print(f"   ⚠️ Sync drift detected - check timing")
+
+# Build visual clips for each paragraph/section
+clips = []
+
+# Fallback if timing failed for some reason
+if not scene_starts or not paragraph_durations:
+    scene_starts = [0.0]
+    paragraph_durations = [duration]
+    paragraphs = [full_script]
+
+for i, (start, dur) in enumerate(zip(scene_starts, paragraph_durations)):
+    # Use scene image if available, else reuse last image, else None (ColorClip fallback in create_enhanced_scene)
+    if i < len(scene_images) and scene_images[i]:
+        img_path = scene_images[i]
+    elif scene_images:
+        img_path = scene_images[-1]  # reuse last image for extra sections
+    else:
+        img_path = None
+
+    text = paragraphs[i] if i < len(paragraphs) else ""
+    scene_clips = create_enhanced_scene(img_path, text, dur, start, i)
+    clips.extend(scene_clips)
+
+# Absolute guard: ensure at least one visual clip exists
+if not clips:
+    print("   ⚠️ No visual clips built; using black fallback background")
+    clips = [
+        ColorClip(size=(w, h), color=NOIR_COLORS['deep_black']).with_duration(duration).with_start(0)
+    ]
 
 print(f"\n🎬 Composing mystery video ({len(clips)} clips)...")
 video = CompositeVideoClip(clips, size=(w, h))
