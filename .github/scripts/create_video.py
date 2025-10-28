@@ -1070,11 +1070,11 @@ print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_
 enhanced_timing = load_enhanced_timing()
 
 # Get paragraphs (your existing code)
-full_script = script_data.get('script', '')
+full_script = data.get('script', '')  # ✅ FIXED: Use 'data' not 'script_data'
 if not full_script:
-    bullets = script_data.get('bullets', [])
-    cta = script_data.get('cta', '')
-    full_script = f"{script_data.get('hook', '')}\n\n{' '.join(bullets)}\n\n{cta}"
+    bullets = data.get('bullets', [])
+    cta = data.get('cta', '')
+    full_script = f"{data.get('hook', '')}\n\n{' '.join(bullets)}\n\n{cta}"
 
 paragraphs = [p.strip() for p in full_script.split('\n\n') if p.strip()]
 
