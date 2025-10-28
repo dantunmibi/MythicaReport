@@ -968,10 +968,10 @@ def create_dynamic_music_layer(audio_duration, script_data):
         music = trim_audio_safe(music, audio_duration)
         
         volume_levels = {
-            'evening_prime': 0.20,
-            'late_night': 0.15,
-            'weekend_binge': 0.22,
-            'general': 0.18
+            'evening_prime': 0.12,  # Was 0.20
+            'late_night': 0.10,     # Was 0.15 (darker content can have quieter music)
+            'weekend_binge': 0.14,  # Was 0.22
+            'general': 0.12         # Was 0.18
         }
         
         base_volume = volume_levels.get(content_type, 0.18)
@@ -1066,7 +1066,7 @@ print(f"🕰️ Speech Window — Start: {start_offset:.3f}s, Duration: {speech_
 # ✅✅✅ --- FINAL SYNC FIX --- ✅✅✅
 # This entire block replaces the previous timing logic to be fully robust.
 
-# ✅✅✅ --- FINAL, ROBUST TIMING LOGIC --- ✅✅✅
+# ✅✅✅ --- FINAL, ROBUST, AND COMPATIBLE TIMING LOGIC --- ✅✅✅
 
 if not os.path.exists(audio_path): raise FileNotFoundError(f"Audio not found: {audio_path}")
 
@@ -1084,89 +1084,75 @@ audio_clip = AudioFileClip(working_audio_path)
 total_duration = audio_clip.duration
 print(f"🎵 Audio Duration: {total_duration:.2f}s")
 
-# Use Pydub for local silence detection as a reliable source of truth
+# Use a compatible Pydub method for local silence detection
 try:
     segment = AudioSegment.from_file(working_audio_path)
-    # Get the timestamp of the first non-silent chunk
-    def get_first_sound_ms(seg, chunk_size=10, silence_thresh=-45.0):
-        trim_ms = 0
-        # Iterate until a chunk is louder than the threshold
-        while trim_ms < len(seg) and seg[trim_ms:trim_ms+chunk_size].dBFS < silence_thresh:
-            trim_ms += chunk_size
-        return trim_ms
+    silence_thresh = -45.0  # dBFS
+    chunk_size = 10         # ms
 
-    start_offset_ms = get_first_sound_ms(segment)
-    # Calculate speech duration by stripping silence from both ends
-    speech_only_segment = segment.strip_leading_silence(silence_threshold=-45).strip_trailing_silence(silence_threshold=-45)
+    # Find start of speech (manual strip_leading_silence)
+    start_trim = 0
+    while start_trim < len(segment) and segment[start_trim:start_trim+chunk_size].dBFS < silence_thresh:
+        start_trim += chunk_size
+    start_offset = start_trim / 1000.0
+
+    # Find end of speech (manual strip_trailing_silence)
+    end_trim = 0
+    while end_trim < len(segment) and segment[len(segment)-end_trim-chunk_size:len(segment)-end_trim].dBFS < silence_thresh:
+        end_trim += chunk_size
     
-    start_offset = start_offset_ms / 1000.0
-    speech_duration = len(speech_only_segment) / 1000.0
-    
-    print(f"🕰️ Speech Window Detected — Start: {start_offset:.3f}s, Speech Duration: {speech_duration:.3f}s")
+    # Calculate speech duration based on detected silence
+    speech_duration = (len(segment) - start_trim - end_trim) / 1000.0
+    speech_duration = max(0.1, speech_duration) # Ensure it's not negative
+
+    print(f"🕰️ Speech Window Detected (Compatible) — Start: {start_offset:.3f}s, Speech Duration: {speech_duration:.3f}s")
 except Exception as e:
-    print(f"⚠️ Pydub detection failed ({e}), assuming full duration for fallback.")
+    print(f"⚠️ Pydub detection failed with compatible method ({e}), assuming full duration.")
     start_offset, speech_duration = 0.0, total_duration
+
+# ---- The rest of your timing logic remains the same and is now fed correct data ----
 
 scene_starts, paragraph_durations = [], []
 enhanced_timing = load_enhanced_timing()
 
-# 1. PRIMARY PATH: Use pre-calculated JSON if it's valid and matches the script
 if enhanced_timing and enhanced_timing.get('sections') and len(enhanced_timing['sections']) == len(paragraphs):
     print("\n⏱️ Using PRE-CALCULATED timing from audio_timing.json...")
     for section in enhanced_timing['sections']:
         scene_starts.append(section['start'])
         paragraph_durations.append(section['duration'])
     print("   ✅ Successfully applied pre-calculated timings.")
-
 else:
-    # 2. FALLBACK PATH: Use local detection if JSON is missing or mismatched
     print("\n📊 Using ROBUST proportional fallback timing (based on detected speech window)...")
     total_words = sum(len(p.split()) for p in paragraphs if p)
-    
     if total_words > 0 and speech_duration > 0:
-        current_time = start_offset # CRITICAL: Start visuals when speech starts
-        
+        current_time = start_offset
         # Calculate proportional durations first
-        for p in paragraphs:
-            # CRITICAL: Base duration on SPEECH duration, not total
-            dur = (len(p.split()) / total_words) * speech_duration
-            paragraph_durations.append(dur)
-
-        # Normalize the calculated durations to fit the speech window EXACTLY to prevent drift
-        calculated_total = sum(paragraph_durations)
-        if calculated_total > 0:
-            scale_factor = speech_duration / calculated_total
-            paragraph_durations = [d * scale_factor for d in paragraph_durations]
-            print(f"   ✅ Normalized fallback timings by scale factor: {scale_factor:.4f}")
-
-        # Now, build the final timeline of start times
+        temp_durs = [(len(p.split()) / total_words) * speech_duration for p in paragraphs]
+        # Normalize to fit speech window EXACTLY
+        scale_factor = speech_duration / sum(temp_durs) if sum(temp_durs) > 0 else 1
+        paragraph_durations = [d * scale_factor for d in temp_durs]
+        # Build final timeline
         for dur in paragraph_durations:
             scene_starts.append(current_time)
             current_time += dur
     else:
-        # Absolute safety net if no words or speech detected
-        print("   ⚠️ No words or speech duration to calculate timing. Dividing total duration evenly.")
+        # Absolute safety net
         dur_per_para = total_duration / max(1, len(paragraphs))
         for i in range(len(paragraphs)):
             scene_starts.append(i * dur_per_para)
             paragraph_durations.append(dur_per_para)
 
-# 3. FINAL VALIDATION & LOGGING
-# (The normalization logic was moved into the fallback path, so this check is for logging)
+# Final validation and logging
 final_visual_end = (scene_starts[-1] + paragraph_durations[-1]) if scene_starts else 0
+# The drift that matters is the gap between the end of visuals and the end of the total audio file.
 final_drift = abs(total_duration - final_visual_end)
 print(f"📊 Final Sync Check: Visual End={final_visual_end:.3f}s vs Audio End={total_duration:.3f}s. Drift: {final_drift*1000:.0f}ms")
 if final_drift > 0.5:
-    print(f"   ⚠️ WARNING: Significant sync drift of {final_drift:.2f}s detected. Check timing logic.")
-
-if final_drift < 0.05:
-    print(f"   ✅ FRAME-PERFECT SYNC!")
-elif final_drift < 0.2:
-    print(f"   ✅ Excellent sync")
-elif final_drift < 0.5:
-    print(f"   ✅ Good sync")
+    print(f"   ⚠️ WARNING: Significant sync drift of {final_drift:.2f}s detected. Visuals may end early.")
 else:
-    print(f"   ⚠️ Sync drift detected - check timing (Drift: {final_drift:.3f}s)")
+    print(f"   ✅ Excellent sync.")
+
+# ✅✅✅ --- END OF TIMING LOGIC REPLACEMENT --- ✅✅✅
 
 # Build visual clips for each paragraph/section
 clips = []

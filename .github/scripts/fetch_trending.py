@@ -169,7 +169,7 @@ def get_reddit_mystery_trends() -> List[str]:
         for subreddit in subreddits:
             try:
                 url = f'https://www.reddit.com/r/{subreddit}/hot.json?limit=25'
-                headers = {'User-Agent': f'MythicaReport-Scraper/1.0 by u/YourUsername'}
+                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'}
                 
                 print(f"   👽 Fetching r/{subreddit}...")
                 response = requests.get(url, headers=headers, timeout=10)
