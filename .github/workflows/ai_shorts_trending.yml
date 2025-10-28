@@ -389,7 +389,27 @@ jobs:
           COMPRESSED_PATH="tmp/compressed_for_makecom.mp4"
 
           # Re-compress the FOUND video with a much lower bitrate
-          ffmpeg -i "$VIDEO_PATH" -c:v libx264 -preset veryfast -crf 28 -b:v 800k -c:a aac -b:a 128k -y "$COMPRESSED_PATH"
+          # --- START TWO-PASS ENCODING BLOCK ---
+          
+          # Define a strict target bitrate for video to stay under 5MB for a ~60s clip
+          # Calculation: (5MB * 8000) / 60s = ~667 kbps total. Let's give audio 96k, so video gets ~550k.
+          TARGET_VIDEO_BITRATE="550k"
+          TARGET_AUDIO_BITRATE="96k"
+
+          echo "Targeting video bitrate: $TARGET_VIDEO_BITRATE"
+
+          # Pass 1: Analyze the video and generate a stats file. Output is discarded.
+          echo "Starting Pass 1..."
+          ffmpeg -y -i "$VIDEO_PATH" -c:v libx264 -preset veryfast -b:v $TARGET_VIDEO_BITRATE -pass 1 -an -f mp4 /dev/null
+
+          # Pass 2: Use the stats file to perform the actual encoding, guaranteeing the size.
+          echo "Starting Pass 2..."
+          ffmpeg -i "$VIDEO_PATH" -c:v libx264 -preset veryfast -b:v $TARGET_VIDEO_BITRATE -pass 2 -c:a aac -b:a $TARGET_AUDIO_BITRATE -y "$COMPRESSED_PATH"
+
+          # Clean up the ffmpeg log files
+          rm -f ffmpeg2pass-0.log ffmpeg2pass-0.log.mbtree
+
+          # --- END TWO-PASS ENCODING BLOCK ---
           
           echo "Compressed video created:"
           ls -lh "$COMPRESSED_PATH"
@@ -472,7 +492,7 @@ jobs:
               }
             }"
           echo "✅ Webhook sent to Make.com"
-          
+
       - name: 📚 Organize into mysterious playlists
         if: success() && steps.schedule_check.outputs.should_post == 'true'
         env:

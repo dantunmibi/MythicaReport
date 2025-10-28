@@ -454,147 +454,100 @@ def generate_audio_with_fallback(full_text, output_path):
     return generate_audio_espeak(full_text, output_path, speed)
 
 
-def optimize_audio_timing(audio_path, expected_duration, paragraphs):
+def optimize_audio_timing(audio_path, paragraphs):
     """
-    ✅ ENHANCED & FIXED: Optimize audio timing with silence detection and word-proportional distribution.
+    ✅ THE DEFINITIVE SYNC FIX: Uses whisper-timestamped to get word-level timings.
+    This accounts for all dramatic pauses and variations in speech pace.
     """
-    
     try:
-        # Get actual audio duration
-        result = subprocess.run([
-            'ffprobe',
-            '-v', 'error',
-            '-show_entries', 'format=duration',
-            '-of', 'default=noprint_wrappers=1:nokey=1',
+        print("\n" + "="*70)
+        print("🎤 Applying Whisper-Timestamped for PERFECT Synchronization")
+        print("="*70)
+        
+        # Define the output path for the timestamp JSON
+        json_output_path = os.path.join(TMP, "voice.json")
+
+        # Run the whisper-timestamped command
+        # This will analyze voice.mp3 and create voice.json with word timings
+        command = [
+            "whisper_timestamped",
+            "--model", "tiny",          # 'tiny' is very fast and accurate enough for this
+            "--language", "en",
+            "--output_format", "json",
+            "--output_dir", TMP,
             audio_path
-        ], capture_output=True, text=True, check=True)
+        ]
         
-        actual_duration = float(result.stdout.strip())
+        print(f"   Running command: {' '.join(command)}")
+        result = subprocess.run(command, check=True, capture_output=True, text=True)
         
-        lead_silence = 0.0
-        trail_silence = 0.0
+        if not os.path.exists(json_output_path):
+            raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output.")
+
+        # Now, load the generated JSON to create our paragraph-level timings
+        with open(json_output_path, 'r', encoding='utf-8') as f:
+            whisper_data = json.load(f)
+
+        # Correlate words back to paragraphs to get accurate start/end times for each paragraph
+        all_words = [word_info for segment in whisper_data['segments'] for word_info in segment['words']]
         
-        # ✅ SYNC FIX: Correctly detect silence using ffmpeg by parsing stderr.
-        try:
-            silence_cmd = [
-                'ffmpeg', '-i', audio_path,
-                '-af', 'silencedetect=noise=-40dB:d=0.1',
-                '-f', 'null', '-'
-            ]
-            # capture_output=True captures stdout and stderr. silencedetect prints to stderr.
-            silence_result = subprocess.run(silence_cmd, capture_output=True, text=True, check=False)
-
-            silence_starts = []
-            silence_ends = []
-
-            # Parse stderr for silence detection info
-            for line in silence_result.stderr.split('\n'):
-                if 'silence_start' in line:
-                    match = re.search(r'silence_start: ([\d.]+)', line)
-                    if match:
-                        silence_starts.append(float(match.group(1)))
-                elif 'silence_end' in line:
-                    # Example line: [silencedetect @ 0x...] silence_end: 3.456 | silence_duration: 3.456
-                    match = re.search(r'silence_end: ([\d.]+) \|', line)
-                    if match:
-                        silence_ends.append(float(match.group(1)))
-
-            # Leading silence: if the first silence ends after the start
-            if silence_ends and silence_starts and silence_starts[0] < 0.1 and silence_ends[0] > 0.05:
-                lead_silence = silence_ends[0]
-
-            # Trailing silence: if the last silence starts near the end of the audio
-            if silence_starts:
-                last_silence_start = silence_starts[-1]
-                if actual_duration - last_silence_start < 2.0:
-                    trail_silence = actual_duration - last_silence_start
+        word_index = 0
+        section_timings = []
+        
+        for i, para in enumerate(paragraphs):
+            para_words = para.replace('-', ' ').split()
+            para_word_count = len(para_words)
             
-            print(f"🔧 Silence Detection: Lead={lead_silence:.3f}s, Trail={trail_silence:.3f}s")
-            
-        except Exception as e:
-            print(f"⚠️ Silence detection failed: {e}, continuing without it")
-        
-        # Calculate speech window
-        speech_start = lead_silence
-        # Ensure speech_duration is never negative
-        speech_duration = max(0.1, actual_duration - lead_silence - trail_silence)
-        
-        print(f"\n⏱️ Enhanced Audio Timing Analysis:")
-        print(f"   Total duration: {actual_duration:.2f}s")
-        print(f"   Speech window: {speech_start:.2f}s to {speech_start + speech_duration:.2f}s")
-        print(f"   Speech duration: {speech_duration:.2f}s")
-        print(f"   Paragraphs: {len(paragraphs)}")
-        
-        # Create section timings based on the *actual speech window*
-        total_words = sum(len(p.split()) for p in paragraphs)
-        
-        if not paragraphs or total_words == 0:
-            print("❌ No paragraphs/words to time! Creating single section fallback.")
-            section_timings = [{
-                'name': 'full_script',
-                'text_preview': 'Full script',
-                'start': speech_start,
-                'duration': speech_duration,
-                'end': speech_start + speech_duration,
-                'words': 0
-            }]
-        else:
-            current_time = speech_start
-            section_timings = []
-            
-            for i, paragraph in enumerate(paragraphs):
-                para_words = len(paragraph.split())
+            if para_word_count == 0:
+                continue
+
+            if word_index >= len(all_words):
+                print(f"⚠️ Ran out of timestamped words while processing paragraph {i+1}. This may happen if the script text differs from the TTS audio.")
+                break
                 
-                # Proportional duration based on word count within the speech window
-                word_duration = (para_words / total_words) * speech_duration
-                
-                section_timings.append({
-                    'name': f'paragraph_{i+1}',
-                    'text_preview': paragraph[:60] + "..." if len(paragraph) > 60 else paragraph,
-                    'start': current_time,
-                    'duration': word_duration,
-                    'end': current_time + word_duration,
-                    'words': para_words
-                })
-                
-                current_time += word_duration
+            # The start time of this paragraph is the start time of its first word
+            para_start_time = all_words[word_index]['start']
             
-            # Normalize to fit speech window EXACTLY, correcting any floating point drift
-            total_timed_duration = sum(s['duration'] for s in section_timings)
-            if section_timings and abs(total_timed_duration - speech_duration) > 0.01:
-                scale = speech_duration / total_timed_duration
-                current_time = speech_start
-                for timing in section_timings:
-                    timing['duration'] *= scale
-                    timing['start'] = current_time
-                    timing['end'] = current_time + timing['duration']
-                    current_time = timing['end']
-                print(f"   ✅ Normalized section timings by scale factor: {scale:.3f}")
-        
-        print(f"\n📊 Enhanced Section Timings ({len(section_timings)} sections):")
-        for i, timing in enumerate(section_timings):
-            print(f"   {timing['name']}: {timing['start']:.2f}s - {timing['end']:.2f}s "
-                  f"({timing['words']} words, {timing['duration']:.2f}s)")
+            # The end time of this paragraph is the end time of its last word
+            end_word_index = min(word_index + para_word_count - 1, len(all_words) - 1)
+            para_end_time = all_words[end_word_index]['end']
+            
+            para_duration = para_end_time - para_start_time
+            
+            section_timings.append({
+                'name': f'paragraph_{i+1}',
+                'start': para_start_time,
+                'duration': para_duration,
+                'end': para_end_time,
+                'words': para_word_count
+            })
+            
+            # Move the word index forward
+            word_index += para_word_count
 
-        # Save timing metadata to JSON
+        # Save this new, perfectly accurate timing data to audio_timing.json
+        # The video script will use this file as its source of truth.
         timing_path = os.path.join(TMP, "audio_timing.json")
         with open(timing_path, 'w') as f:
             json.dump({
-                'total_duration': actual_duration,
-                'speech_start': speech_start,
-                'speech_duration': speech_duration,
+                'total_duration': whisper_data['segments'][-1]['end'],
+                'speech_duration': whisper_data['segments'][-1]['end'] - whisper_data['segments'][0]['start'],
                 'sections': section_timings,
                 'optimized': True,
-                'timing_method': 'enhanced_proportional',
+                'timing_method': 'whisper_timestamped',
             }, f, indent=2)
-        
-        print(f"\n✅ Enhanced timing optimization complete")
+            
+        print(f"\n✅ Perfect timing data generated by Whisper.")
         print(f"   Saved to: {timing_path}")
-        
         return section_timings
-        
+
     except Exception as e:
-        print(f"⚠️ FATAL: Timing optimization failed: {e}")
+        print(f"❌ FATAL: Whisper-timestamped failed: {e}")
+        if 'result' in locals() and result:
+            print("--- WHISPER STDERR ---")
+            print(result.stderr)
+            print("--- WHISPER STDOUT ---")
+            print(result.stdout)
         import traceback
         traceback.print_exc()
         raise

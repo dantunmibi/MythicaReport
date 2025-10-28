@@ -53,9 +53,14 @@ MUSIC_LIBRARY = {
 
     # 👻 SUSPENSEFUL TENSION (Building Suspense)
     'suspense_build': {
-        'name': 'Suspense Builder',
-        'url': 'https://cdn.pixabay.com/download/audio/2024/03/12/audio_1e5465fb8c.mp3?filename=haunting-piano-ambient-tension-full-272282.mp3',
-        'backup_url': 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Tense%20Suspense.mp3',
+        'name': 'Dark Tension Builder',
+        'artist': 'Muzaproduction',
+        'source': 'Pixabay',
+        'tags': ['suspense', 'tension', 'horror', 'dark', 'creeping'],
+        # ✅ NEW, WORKING LINKS
+        'url': 'https://cdn.pixabay.com/download/audio/2022/10/26/audio_5a17e00421.mp3', # Primary
+        'backup_url': 'https://cdn.pixabay.com/download/audio/2023/02/13/audio_7717072455.mp3', # Backup
+        'tertiary_url': 'https://cdn.pixabay.com/download/audio/2022/11/17/audio_8b8a071e62.mp3', # Tertiary
         'duration': 135,
         'emotion': 'tense, building, suspenseful',
         'scenes': ['suspense', 'paranormal'],
@@ -281,111 +286,77 @@ def get_track_hash(track_key):
 
 def download_track(track_key, track_info, force=False):
     """
-    Download a music track with automatic backup URL fallback
+    Download a music track, trying multiple URLs with a robust User-Agent.
     Returns: local file path or None
     """
-    
-    # Generate local filename
     track_hash = get_track_hash(track_key)
     filename = f"{track_key}_{track_hash}.mp3"
     filepath = os.path.join(MUSIC_DIR, filename)
-    
-    # Check cache
+
     cache = load_music_cache()
-    
     if not force and track_key in cache:
         cached_path = cache[track_key].get('local_path')
-        if cached_path and os.path.exists(cached_path):
+        if cached_path and os.path.exists(cached_path) and os.path.getsize(cached_path) > 10000:
             print(f"✅ Using cached: {track_info['name']}")
             return cached_path
-    
-    # Prepare URLs to try (primary + backup)
-    urls_to_try = [
-        ('Primary (Pixabay)', track_info['url']),
-    ]
-    
-    if 'backup_url' in track_info:
-        urls_to_try.append(('Backup (Incompetech)', track_info['backup_url']))
-    
+
     print(f"📥 Downloading: {track_info['name']}...")
     
-    for source_name, url in urls_to_try:
-        try:
-            print(f"   🔄 Trying {source_name}...")
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'audio/mpeg,audio/*;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.5',
-                'Accept-Encoding': 'identity',
-                'Connection': 'keep-alive',
-                'Referer': 'https://pixabay.com/' if 'pixabay' in url else 'https://incompetech.com/'
-            }
-            
-            response = requests.get(
-                url,
-                timeout=120,
-                stream=True,
-                headers=headers,
-                allow_redirects=True
-            )
-            
-            if response.status_code == 200:
-                # Verify content type
-                content_type = response.headers.get('Content-Type', '').lower()
-                
-                # Accept audio types or octet-stream (generic binary)
-                if not ('audio' in content_type or 'octet-stream' in content_type or 'mpeg' in content_type):
-                    print(f"      ⚠️ Unexpected content type: {content_type}")
-                    continue
-                
-                # Download with progress
-                total_size = int(response.headers.get('content-length', 0))
-                downloaded = 0
-                
-                with open(filepath, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                
-                # Verify file size (at least 50KB for valid audio)
-                file_size = os.path.getsize(filepath)
-                
-                if file_size > 50000:  # 50KB minimum
-                    print(f"      ✅ Downloaded {file_size / 1024:.1f} KB from {source_name}")
-                    
-                    # Update cache with successful source
-                    cache[track_key] = {
-                        'name': track_info['name'],
-                        'local_path': filepath,
-                        'url': url,
-                        'source': source_name,
-                        'duration': track_info['duration'],
-                        'emotion': track_info['emotion'],
-                        'scenes': track_info['scenes'],
-                        'volume_default': track_info['volume_default'],
-                        'downloaded_at': datetime.now().isoformat(),
-                        'file_size_kb': round(file_size / 1024, 2)
-                    }
-                    save_music_cache(cache)
-                    
-                    return filepath
-                else:
-                    print(f"      ⚠️ File too small ({file_size} bytes), trying next source...")
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
-                        
-            else:
-                print(f"      ⚠️ HTTP {response.status_code}")
-                
-        except requests.exceptions.Timeout:
-            print(f"      ⚠️ Download timeout (>120s)")
-        except requests.exceptions.RequestException as e:
-            print(f"      ⚠️ Network error: {str(e)[:50]}")
-        except Exception as e:
-            print(f"      ⚠️ Error: {str(e)[:50]}")
+    # ✅ FLEXIBLE URL GATHERING
+    urls_to_try = [
+        ('Primary', track_info.get('url')),
+        ('Backup', track_info.get('backup_url')),
+        ('Tertiary', track_info.get('tertiary_url')) # Will be ignored if not present
+    ]
     
+    # ✅ IMPROVED BROWSER-LIKE HEADER
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+    }
+
+    for source_name, url in urls_to_try:
+        # Skip if the URL key (e.g., 'tertiary_url') doesn't exist for a track
+        if not url:
+            continue
+            
+        try:
+            print(f"   🔄 Trying {source_name} source...")
+            response = requests.get(url, headers=headers, timeout=120, stream=True, allow_redirects=True)
+            response.raise_for_status() # Raise an exception for HTTP error codes
+
+            # Basic content type check
+            content_type = response.headers.get('Content-Type', '').lower()
+            if 'audio' not in content_type and 'octet-stream' not in content_type:
+                print(f"      ⚠️ Unexpected content type: {content_type}, skipping.")
+                continue
+
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 50000:
+                print(f"      ✅ Downloaded {os.path.getsize(filepath) / 1024:.1f} KB from {source_name}")
+                                # Update cache
+                # Start with a copy of all info from the main library
+                cache_entry = track_info.copy()
+                # Update with download-specific details
+                cache_entry.update({
+                    'local_path': filepath,
+                    'url_used': url,
+                    'source_used': source_name,
+                    'downloaded_at': datetime.now().isoformat(),
+                    'file_size_kb': round(os.path.getsize(filepath) / 1024, 2)
+                })
+                cache[track_key] = cache_entry
+                save_music_cache(cache)
+                return filepath
+            else:
+                if os.path.exists(filepath): os.remove(filepath)
+                print(f"      ⚠️ Download was empty or too small.")
+
+        except requests.exceptions.RequestException as e:
+            print(f"      ⚠️ Network error for {source_name}: {e}")
+
     print(f"   ❌ All sources failed for {track_key}")
     return None
 
