@@ -455,69 +455,45 @@ def generate_audio_with_fallback(full_text, output_path):
 
 
 def optimize_audio_timing(audio_path, paragraphs):
-    """
-    ✅ THE DEFINITIVE SYNC FIX: Uses whisper-timestamped to get word-level timings.
-    This accounts for all dramatic pauses and variations in speech pace.
-    """
     try:
         print("\n" + "="*70)
         print("🎤 Applying Whisper-Timestamped for PERFECT Synchronization")
         print("="*70)
         
-        # Define output paths
         json_output_path = os.path.join(TMP, "voice.json")
-        # Define a path for a clean, standardized WAV file
         clean_wav_path = os.path.join(TMP, "voice_16khz.wav")
 
-        # --- PRE-PROCESSING STEP ---
-        # Convert the source audio to a standardized 16kHz WAV file.
-        # This is the most compatible format for Whisper and avoids timestamp errors.
         print("   Converting audio to 16kHz WAV for maximum compatibility...")
         conversion_command = [
-            "ffmpeg",
-            "-i", audio_path,
-            "-ar", "16000",       # Set audio sample rate to 16kHz
-            "-ac", "1",           # Set audio to mono
-            "-c:a", "pcm_s16le",  # Use standard 16-bit PCM audio codec
-            "-y",                 # Overwrite if exists
-            clean_wav_path
+            "ffmpeg", "-i", audio_path, "-ar", "16000",
+            "-ac", "1", "-c:a", "pcm_s16le", "-y", clean_wav_path
         ]
         subprocess.run(conversion_command, check=True, capture_output=True)
         print("   ✅ Audio successfully standardized.")
-        # --- END PRE-PROCESSING ---
-
-        # --- WHISPER EXECUTION ---
-        # Find the path to the ffmpeg executable, which is a required dependency for whisper
-        import shutil
-        ffmpeg_path = shutil.which("ffmpeg")
-        if not ffmpeg_path:
-            raise FileNotFoundError("ffmpeg executable not found in system PATH. Please ensure it's installed and accessible.")
         
-        print(f"   Found ffmpeg at: {ffmpeg_path}")
-
-        # Create a copy of the current environment and set the FFMPEG_BINARY path
-        # This is a robust way to ensure whisper finds its dependency.
-        env = os.environ.copy()
-        env["FFMPEG_BINARY"] = ffmpeg_path
+        # --- WHISPER EXECUTION (SHELL MODE) ---
+        command_str = (
+            f"whisper_timestamped "
+            f"--model tiny "
+            f"--language en "
+            f"--device cpu "
+            f"--output_format json "
+            f"--output_dir '{TMP}' "
+            f"'{clean_wav_path}'"
+        )
         
-        # Run the whisper-timestamped command on the CLEAN WAV file
-        command = [
-            "whisper_timestamped",
-            "--model", "tiny",
-            "--language", "en",
-            "--device", "cpu",  # ✅ CRITICAL: Force CPU-only operation
-            "--output_format", "json",
-            "--output_dir", TMP,
-            clean_wav_path
-        ]
+        print(f"   Running command via shell: {command_str}")
         
-        print(f"   Running command: {' '.join(command)}")
-        # Pass the modified environment to the subprocess
-        result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
-        # --- END WHISPER EXECUTION ---
+        result = subprocess.run(
+            command_str,
+            shell=True,
+            check=True,
+            capture_output=True,
+            text=True
+        )
         
         if not os.path.exists(json_output_path):
-            raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output.")
+            raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output after shell execution.")
 
         # Now, load the generated JSON to create our paragraph-level timings
         with open(json_output_path, 'r', encoding='utf-8') as f:
