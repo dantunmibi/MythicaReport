@@ -472,25 +472,33 @@ def optimize_audio_timing(audio_path, paragraphs):
         print("   ✅ Audio successfully standardized.")
         
         # --- WHISPER EXECUTION (SHELL MODE) ---
+        # --- WHISPER EXECUTION (FINAL METHOD: Change Working Directory) ---
+        # This is the most robust method for CI/CD environments.
+        # It eliminates all ambiguity about input/output paths for the external tool.
+
+        # The command now only needs the filename, as we will run it from within the /tmp dir
         command_str = (
-            f"whisper_timestamped "
-            f"--model tiny "
-            f"--language en "
-            f"--device cpu "
-            f"--output_format json "
-            f"--output_dir '{TMP}' "
-            f"'{clean_wav_path}'"
+            "whisper_timestamped "
+            "--model tiny "
+            "--language en "
+            "--device cpu "
+            "--output_format json "
+            "voice_16khz.wav"  # Use the relative filename
         )
         
-        print(f"   Running command via shell: {command_str}")
+        print(f"   Changing directory to: {TMP}")
+        print(f"   Running command: {command_str}")
         
+        # Execute the command from within the /tmp directory
         result = subprocess.run(
             command_str,
             shell=True,
             check=True,
             capture_output=True,
-            text=True
+            text=True,
+            cwd=TMP  # ✅ CRITICAL: Set the current working directory for the command
         )
+        # --- END WHISPER EXECUTION ---
         
         if not os.path.exists(json_output_path):
             raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output after shell execution.")
