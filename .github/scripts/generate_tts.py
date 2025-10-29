@@ -471,33 +471,41 @@ def optimize_audio_timing(audio_path, paragraphs):
         subprocess.run(conversion_command, check=True, capture_output=True)
         print("   ✅ Audio successfully standardized.")
         
-        # --- WHISPER EXECUTION (SHELL MODE) ---
-        # --- WHISPER EXECUTION (FINAL METHOD: Change Working Directory) ---
-        # This is the most robust method for CI/CD environments.
-        # It eliminates all ambiguity about input/output paths for the external tool.
+        # --- WHISPER EXECUTION (FINAL METHOD: Capture STDOUT) ---
 
-        # The command now only needs the filename, as we will run it from within the /tmp dir
+        # Command is simplified: we don't need --output_dir for JSON format
         command_str = (
-            "whisper_timestamped "
-            "--model tiny "
-            "--language en "
-            "--device cpu "
-            "--output_format json "
-            "voice_16khz.wav"  # Use the relative filename
+            f"whisper_timestamped "
+            f"--model tiny "
+            f"--language en "
+            f"--device cpu "
+            f"--output_format json "
+            f"'{clean_wav_path}'"
         )
         
-        print(f"   Changing directory to: {TMP}")
-        print(f"   Running command: {command_str}")
+        print(f"   Running command and capturing output: {command_str}")
         
-        # Execute the command from within the /tmp directory
         result = subprocess.run(
             command_str,
             shell=True,
             check=True,
             capture_output=True,
-            text=True,
-            cwd=TMP  # ✅ CRITICAL: Set the current working directory for the command
+            text=True
         )
+
+        # The JSON is in result.stdout. We load it directly from there.
+        # No need to check for a file that is never created.
+        try:
+            whisper_data = json.loads(result.stdout)
+        except json.JSONDecodeError:
+            print("❌ FATAL: Failed to parse JSON from whisper-timestamped output.")
+            print("--- WHISPER STDOUT ---")
+            print(result.stdout)
+            print("--- WHISPER STDERR ---")
+            print(result.stderr)
+            raise
+
+        print("   ✅ Successfully captured and parsed Whisper JSON output.")
         # --- END WHISPER EXECUTION ---
         
         if not os.path.exists(json_output_path):
