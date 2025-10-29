@@ -505,6 +505,7 @@ def optimize_audio_timing(audio_path, paragraphs):
             "whisper_timestamped",
             "--model", "tiny",
             "--language", "en",
+            "--device", "cpu",  # ✅ CRITICAL: Force CPU-only operation
             "--output_format", "json",
             "--output_dir", TMP,
             clean_wav_path
