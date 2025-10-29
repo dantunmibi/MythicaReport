@@ -464,20 +464,37 @@ def optimize_audio_timing(audio_path, paragraphs):
         print("🎤 Applying Whisper-Timestamped for PERFECT Synchronization")
         print("="*70)
         
-        # Define the output path for the timestamp JSON
+        # Define output paths
         json_output_path = os.path.join(TMP, "voice.json")
+        # Define a path for a clean, standardized WAV file
+        clean_wav_path = os.path.join(TMP, "voice_16khz.wav")
 
-        # Run the whisper-timestamped command
-        # This will analyze voice.mp3 and create voice.json with word timings
+        # --- PRE-PROCESSING STEP ---
+        # Convert the source audio to a standardized 16kHz WAV file.
+        # This is the most compatible format for Whisper and avoids timestamp errors.
+        print("   Converting audio to 16kHz WAV for maximum compatibility...")
+        conversion_command = [
+            "ffmpeg",
+            "-i", audio_path,
+            "-ar", "16000",       # Set audio sample rate to 16kHz
+            "-ac", "1",           # Set audio to mono
+            "-c:a", "pcm_s16le",  # Use standard 16-bit PCM audio codec
+            "-y",                 # Overwrite if exists
+            clean_wav_path
+        ]
+        subprocess.run(conversion_command, check=True, capture_output=True)
+        print("   ✅ Audio successfully standardized.")
+        # --- END PRE-PROCESSING ---
+
+        # Run the whisper-timestamped command on the CLEAN WAV file
         command = [
             "whisper_timestamped",
-            "--model", "tiny",          # 'tiny' is very fast and accurate enough for this
+            "--model", "tiny",
             "--language", "en",
             "--output_format", "json",
             "--output_dir", TMP,
-            audio_path
-        ]
-        
+            clean_wav_path  # ✅ CRITICAL: Use the clean WAV path here
+        ]        
         print(f"   Running command: {' '.join(command)}")
         result = subprocess.run(command, check=True, capture_output=True, text=True)
         
