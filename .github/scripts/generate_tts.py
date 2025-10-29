@@ -643,7 +643,7 @@ def main():
         exit(1)
     
     # ✅ CRITICAL: Pass paragraphs for proper timing
-    section_timings = optimize_audio_timing(output_path, estimated_duration, paragraphs)
+    section_timings = optimize_audio_timing(output_path, paragraphs)
     
     # Save metadata
     save_metadata(output_path, script_data, full_text, estimated_duration)
