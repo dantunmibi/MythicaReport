@@ -486,6 +486,20 @@ def optimize_audio_timing(audio_path, paragraphs):
         print("   ✅ Audio successfully standardized.")
         # --- END PRE-PROCESSING ---
 
+        # --- WHISPER EXECUTION ---
+        # Find the path to the ffmpeg executable, which is a required dependency for whisper
+        import shutil
+        ffmpeg_path = shutil.which("ffmpeg")
+        if not ffmpeg_path:
+            raise FileNotFoundError("ffmpeg executable not found in system PATH. Please ensure it's installed and accessible.")
+        
+        print(f"   Found ffmpeg at: {ffmpeg_path}")
+
+        # Create a copy of the current environment and set the FFMPEG_BINARY path
+        # This is a robust way to ensure whisper finds its dependency.
+        env = os.environ.copy()
+        env["FFMPEG_BINARY"] = ffmpeg_path
+        
         # Run the whisper-timestamped command on the CLEAN WAV file
         command = [
             "whisper_timestamped",
@@ -493,10 +507,13 @@ def optimize_audio_timing(audio_path, paragraphs):
             "--language", "en",
             "--output_format", "json",
             "--output_dir", TMP,
-            clean_wav_path  # ✅ CRITICAL: Use the clean WAV path here
-        ]        
+            clean_wav_path
+        ]
+        
         print(f"   Running command: {' '.join(command)}")
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        # Pass the modified environment to the subprocess
+        result = subprocess.run(command, check=True, capture_output=True, text=True, env=env)
+        # --- END WHISPER EXECUTION ---
         
         if not os.path.exists(json_output_path):
             raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output.")
