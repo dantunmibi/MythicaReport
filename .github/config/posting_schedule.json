@@ -1,0 +1,38 @@
+{
+  "schedule": {
+    "timezone": "UTC",
+    "description": "Optimal posting times for The Mystery Archives, all in UTC.",
+    "weekly_schedule": {
+      "Monday": [
+        {"time": "19:00", "priority": "high", "type": "unsolved_true_crime"},
+        {"time": "23:00", "priority": "medium", "type": "historical_mysteries"}
+      ],
+      "Tuesday": [
+        {"time": "18:00", "priority": "high", "type": "paranormal_hauntings"},
+        {"time": "22:00", "priority": "highest", "type": "cosmic_and_sci_fi"}
+      ],
+      "Wednesday": [
+        {"time": "02:00", "priority": "medium", "type": "high_strangeness"},
+        {"time": "20:00", "priority": "high", "type": "unsolved_true_crime"},
+        {"time": "23:00", "priority": "medium", "type": "historical_mysteries"}
+      ],
+      "Thursday": [
+        {"time": "19:00", "priority": "highest", "type": "cosmic_and_sci_fi"},
+        {"time": "23:00", "priority": "high", "type": "paranormal_hauntings"}
+      ],
+      "Friday": [
+        {"time": "18:00", "priority": "high", "type": "internet_and_modern"},
+        {"time": "22:00", "priority": "highest", "type": "unsolved_true_crime"}
+      ],
+      "Saturday": [
+        {"time": "02:00", "priority": "medium", "type": "high_strangeness"},
+        {"time": "18:00", "priority": "medium", "type": "historical_mysteries"},
+        {"time": "22:00", "priority": "high", "type": "paranormal_hauntings"}
+      ],
+      "Sunday": [
+        {"time": "19:00", "priority": "high", "type": "unsolved_true_crime"},
+        {"time": "23:00", "priority": "highest", "type": "cosmic_and_sci_fi"}
+      ]
+    }
+  }
+}
