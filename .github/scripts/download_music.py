@@ -9,6 +9,7 @@ import json
 import requests
 import hashlib
 from datetime import datetime
+import time
 
 # This import will be used by the scraper function
 try:
