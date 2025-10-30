@@ -454,13 +454,14 @@ def generate_audio_with_fallback(full_text, output_path):
     return generate_audio_espeak(full_text, output_path, speed)
 
 
+# In .github/scripts/generate_tts.py
+
 def optimize_audio_timing(audio_path, paragraphs):
     try:
         print("\n" + "="*70)
         print("🎤 Applying Whisper-Timestamped for PERFECT Synchronization")
         print("="*70)
         
-        json_output_path = os.path.join(TMP, "voice.json")
         clean_wav_path = os.path.join(TMP, "voice_16khz.wav")
 
         print("   Converting audio to 16kHz WAV for maximum compatibility...")
@@ -473,7 +474,6 @@ def optimize_audio_timing(audio_path, paragraphs):
         
         # --- WHISPER EXECUTION (FINAL METHOD: Capture STDOUT) ---
 
-        # Command is simplified: we don't need --output_dir for JSON format
         command_str = (
             f"whisper_timestamped "
             f"--model tiny "
@@ -485,16 +485,14 @@ def optimize_audio_timing(audio_path, paragraphs):
         
         print(f"   Running command and capturing output: {command_str}")
         
+        # Removed check=True to handle non-zero exit code on success
         result = subprocess.run(
             command_str,
             shell=True,
-            check=True,
             capture_output=True,
             text=True
         )
 
-        # The JSON is in result.stdout. We load it directly from there.
-        # No need to check for a file that is never created.
         try:
             whisper_data = json.loads(result.stdout)
         except json.JSONDecodeError:
@@ -507,13 +505,6 @@ def optimize_audio_timing(audio_path, paragraphs):
 
         print("   ✅ Successfully captured and parsed Whisper JSON output.")
         # --- END WHISPER EXECUTION ---
-        
-        if not os.path.exists(json_output_path):
-            raise FileNotFoundError("Whisper-timestamped did not create the expected JSON output after shell execution.")
-
-        # Now, load the generated JSON to create our paragraph-level timings
-        with open(json_output_path, 'r', encoding='utf-8') as f:
-            whisper_data = json.load(f)
 
         # Correlate words back to paragraphs to get accurate start/end times for each paragraph
         all_words = [word_info for segment in whisper_data['segments'] for word_info in segment['words']]
@@ -529,13 +520,11 @@ def optimize_audio_timing(audio_path, paragraphs):
                 continue
 
             if word_index >= len(all_words):
-                print(f"⚠️ Ran out of timestamped words while processing paragraph {i+1}. This may happen if the script text differs from the TTS audio.")
+                print(f"⚠️ Ran out of timestamped words while processing paragraph {i+1}.")
                 break
                 
-            # The start time of this paragraph is the start time of its first word
             para_start_time = all_words[word_index]['start']
             
-            # The end time of this paragraph is the end time of its last word
             end_word_index = min(word_index + para_word_count - 1, len(all_words) - 1)
             para_end_time = all_words[end_word_index]['end']
             
@@ -549,11 +538,8 @@ def optimize_audio_timing(audio_path, paragraphs):
                 'words': para_word_count
             })
             
-            # Move the word index forward
             word_index += para_word_count
 
-        # Save this new, perfectly accurate timing data to audio_timing.json
-        # The video script will use this file as its source of truth.
         timing_path = os.path.join(TMP, "audio_timing.json")
         with open(timing_path, 'w') as f:
             json.dump({
