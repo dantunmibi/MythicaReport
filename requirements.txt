@@ -9,6 +9,7 @@ wheel>=0.41.0
 whisperx
 whisper-timestamped
 selenium
+webdriver-manager
 
 google-generativeai
 numpy
