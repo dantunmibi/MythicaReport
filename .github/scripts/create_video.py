@@ -727,73 +727,62 @@ def smart_text_wrap(text, font_size, max_width):
     return '\n'.join(lines)
 
 
+# In create_video.py
+
 def create_cinematic_text_clip(text, font_size, duration, start_time, position='lower_third', panel_bg=True):
     """
-    ✅ FIXED: Creates a robust, pre-rendered text clip using PIL with cleanup.
+    ✅ PERFORMANCE FIX: Creates a robust, PRE-RENDERED text clip using PIL.
+    This is dramatically faster than using MoviePy's TextClip.
     """
     # 1. Wrap text and get its dimensions
     wrapped_text = smart_text_wrap(text, font_size, TEXT_MAX_WIDTH)
     try:
         pil_font = ImageFont.truetype(FONT, font_size)
     except IOError:
-        print(f"⚠️ Font not found at {FONT}. Using default.")
         pil_font = ImageFont.load_default()
 
     dummy_draw = ImageDraw.Draw(Image.new('RGB', (1, 1)))
     try:
-        bbox = dummy_draw.textbbox((0, 0), wrapped_text, font=pil_font, stroke_width=2)
+        bbox = dummy_draw.textbbox((0, 0), wrapped_text, font=pil_font)
         text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    except Exception:
+    except AttributeError:
         text_width, text_height = dummy_draw.textsize(wrapped_text, font=pil_font)
 
-    # 2. Create the composite image (panel + text) using PIL
+    # 2. Create the final composite image (panel + text)
     panel_padding_x, panel_padding_y = 80, 60
     comp_width = int(text_width + panel_padding_x)
     comp_height = int(text_height + panel_padding_y)
 
-    # Use the stylized panel function if requested
-    if panel_bg:
-        final_image = create_text_panel(comp_width, comp_height, opacity=0.85)
-    else:
-        final_image = Image.new('RGBA', (comp_width, comp_height), (0, 0, 0, 0))
-
-    # Draw the text onto the image, centered within the panel
+    final_image = create_text_panel(comp_width, comp_height, opacity=0.85)
+    
     draw = ImageDraw.Draw(final_image)
     text_x = (comp_width - text_width) / 2
     text_y = (comp_height - text_height) / 2
     
-    # Draw a subtle shadow for better readability
     draw.text((text_x + 2, text_y + 2), wrapped_text, font=pil_font, fill=(10, 10, 10, 180), align='center')
-    # Draw the main text
     draw.text((text_x, text_y), wrapped_text, font=pil_font, fill=NOIR_COLORS['evidence_tan'], align='center')
 
-    # 3. Save the composite image to a temporary file
-    comp_path = os.path.join(TMP, f"text_comp_{time.time()}_{random.randint(1000, 9999)}.png")
+    # 3. Save the pre-rendered image to a temporary file
+    comp_path = register_temp_file(os.path.join(TMP, f"text_comp_{time.time()}_{random.randint(1000, 9999)}.png"))
     final_image.save(comp_path)
-    
-    # ✅ FIXED: Register for cleanup
-    register_temp_file(comp_path)
 
-    # 4. Position and animate this single, robust image clip in MoviePy
+    # 4. Use MoviePy's FAST ImageClip to display the pre-rendered PNG
     if position == 'lower_third':
         clip_pos = ('center', h * 0.70)
-    elif position == 'center':
+    else:
         clip_pos = ('center', 'center')
-    else:  # upper_third
-        clip_pos = ('center', h * 0.25)
 
     final_clip = (ImageClip(comp_path)
                   .with_duration(duration)
                   .with_start(start_time)
                   .with_position(clip_pos))
     
-    # Apply cinematic fade-in/fade-out
     fade_dur = min(0.5, duration / 4)
     final_clip = apply_fadein(final_clip, fade_dur)
     final_clip = apply_fadeout(final_clip, fade_dur)
 
     return [final_clip]
-
+    
 def create_enhanced_scene(image_path, text, duration, start_time, scene_index=0):
     """
     ✅ FIXED: Creates a scene with professionally timed and rendered text.

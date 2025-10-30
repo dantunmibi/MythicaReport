@@ -80,7 +80,7 @@ def upload_video_for_makecom(video_path):
         # Upload video with specific settings for Instagram/TikTok compatibility
         result = cloudinary.uploader.upload(
             video_path,
-            resource_type="video",
+            resource_type="raw",
             folder="makecom_videos",
             public_id=f"{clean_name}_{os.getenv('GITHUB_RUN_NUMBER', 'test')}",
             overwrite=True,
