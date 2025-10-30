@@ -50,20 +50,38 @@ def save_music_cache(cache):
 def get_track_hash(track_key): return hashlib.md5(track_key.encode()).hexdigest()[:12]
 
 
-# ✅ NEW SCRAPER FUNCTION ---
+# In download_music.py
+
 def scrape_pixabay_download_link(page_url: str) -> str | None:
+    """
+    V2: Uses a headless browser (Selenium) to defeat anti-bot measures and scrape the link.
+    """
     if not BS4_AVAILABLE:
-        print("      ⚠️ BeautifulSoup4 is not installed. Cannot scrape page. `pip install beautifulsoup4`")
+        print("      ⚠️ BeautifulSoup4 is not installed. Cannot scrape.")
         return None
     try:
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
-        }
-        print(f"      Scraping page: {page_url}")
-        response = requests.get(page_url, headers=headers, timeout=30)
-        response.raise_for_status()
+        from selenium import webdriver
+        from selenium.webdriver.common.by import By
+        from selenium.webdriver.chrome.service import Service as ChromeService
+        from webdriver_manager.chrome import ChromeDriverManager
 
-        soup = BeautifulSoup(response.text, 'html.parser')
+        print("      🚀 Initializing headless browser (Selenium)...")
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36")
+        
+        # Automatically downloads and manages the correct chromedriver
+        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
+        print(f"      Navigating to page: {page_url}")
+        driver.get(page_url)
+        time.sleep(3) # Wait for JavaScript to load the page content
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        driver.quit() # Close the browser as soon as we have the HTML
+
         download_button = soup.find('a', href=lambda href: href and '/download/audio/' in href)
 
         if download_button and download_button.get('href'):
@@ -71,10 +89,14 @@ def scrape_pixabay_download_link(page_url: str) -> str | None:
             full_link = 'https://pixabay.com' + link if link.startswith('/') else link
             return full_link.split('?')[0]
         else:
-            print("      ⚠️ Could not find download button on page.")
+            print("      ⚠️ Could not find download button on page via Selenium.")
             return None
+
+    except ImportError:
+        print("      ⚠️ Selenium is not installed. `pip install selenium webdriver-manager`")
+        return None
     except Exception as e:
-        print(f"      ⚠️ Error scraping page: {e}")
+        print(f"      ⚠️ Error during headless browser scraping: {e}")
         return None
 
 # ✅ OVERHAULED DOWNLOAD FUNCTION ---

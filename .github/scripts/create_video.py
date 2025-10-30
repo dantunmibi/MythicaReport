@@ -734,7 +734,6 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
     ✅ PERFORMANCE FIX: Creates a robust, PRE-RENDERED text clip using PIL.
     This is dramatically faster than using MoviePy's TextClip.
     """
-    # 1. Wrap text and get its dimensions
     wrapped_text = smart_text_wrap(text, font_size, TEXT_MAX_WIDTH)
     try:
         pil_font = ImageFont.truetype(FONT, font_size)
@@ -748,13 +747,11 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
     except AttributeError:
         text_width, text_height = dummy_draw.textsize(wrapped_text, font=pil_font)
 
-    # 2. Create the final composite image (panel + text)
     panel_padding_x, panel_padding_y = 80, 60
     comp_width = int(text_width + panel_padding_x)
     comp_height = int(text_height + panel_padding_y)
 
     final_image = create_text_panel(comp_width, comp_height, opacity=0.85)
-    
     draw = ImageDraw.Draw(final_image)
     text_x = (comp_width - text_width) / 2
     text_y = (comp_height - text_height) / 2
@@ -762,15 +759,11 @@ def create_cinematic_text_clip(text, font_size, duration, start_time, position='
     draw.text((text_x + 2, text_y + 2), wrapped_text, font=pil_font, fill=(10, 10, 10, 180), align='center')
     draw.text((text_x, text_y), wrapped_text, font=pil_font, fill=NOIR_COLORS['evidence_tan'], align='center')
 
-    # 3. Save the pre-rendered image to a temporary file
-    comp_path = register_temp_file(os.path.join(TMP, f"text_comp_{time.time()}_{random.randint(1000, 9999)}.png"))
+    comp_path = register_temp_file(os.path.join(TMP, f"text_comp_{time.time()}.png"))
     final_image.save(comp_path)
 
-    # 4. Use MoviePy's FAST ImageClip to display the pre-rendered PNG
-    if position == 'lower_third':
-        clip_pos = ('center', h * 0.70)
-    else:
-        clip_pos = ('center', 'center')
+    if position == 'lower_third': clip_pos = ('center', h * 0.70)
+    else: clip_pos = ('center', 'center')
 
     final_clip = (ImageClip(comp_path)
                   .with_duration(duration)
