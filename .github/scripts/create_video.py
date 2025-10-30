@@ -956,7 +956,7 @@ def create_dynamic_music_layer(audio_duration, script_data):
             'general': 0.12         # Was 0.18
         }
         
-        base_volume = volume_levels.get(content_type, 0.18)
+        base_volume = volume_levels.get(content_type, 0.10)
         
         # Apply volume safely
         music = apply_volumex(music, base_volume)

@@ -58,9 +58,8 @@ MUSIC_LIBRARY = {
         'source': 'Pixabay',
         'tags': ['suspense', 'tension', 'horror', 'dark', 'creeping'],
         # ✅ NEW, WORKING LINKS
-        'url': 'https://cdn.pixabay.com/download/audio/2022/10/26/audio_5a17e00421.mp3', # Primary
+        'url': 'https://incompetech.com/music/royalty-free/mp3-royaltyfree/Evening%20of%20Chaos.mp3', # Primary
         'backup_url': 'https://cdn.pixabay.com/download/audio/2023/02/13/audio_7717072455.mp3', # Backup
-        'tertiary_url': 'https://cdn.pixabay.com/download/audio/2022/11/17/audio_8b8a071e62.mp3', # Tertiary
         'duration': 135,
         'emotion': 'tense, building, suspenseful',
         'scenes': ['suspense', 'paranormal'],
