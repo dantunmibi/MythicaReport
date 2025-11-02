@@ -956,7 +956,7 @@ def create_dynamic_music_layer(audio_duration, script_data):
             'general': 0.12         # Was 0.18
         }
         
-        base_volume = volume_levels.get(content_type, 0.10)
+        base_volume = volume_levels.get(content_type, 0.05)
         
         # Apply volume safely
         music = apply_volumex(music, base_volume)
@@ -1111,6 +1111,7 @@ background_music = create_dynamic_music_layer(duration, data)
 if background_music:
     try:
         voice_adjusted = apply_volumex(audio, 1.0)
+        music_ducked = apply_volumex(background_music, 0.1)
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
         video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
