@@ -949,19 +949,23 @@ def create_dynamic_music_layer(audio_duration, script_data):
         # ✅ FIXED: Use safe trim function
         music = trim_audio_safe(music, audio_duration)
         
+        # ✅ PROFESSIONAL MYSTERY AUDIO MIX
         volume_levels = {
-            'evening_prime': 0.12,  # Was 0.20
-            'late_night': 0.10,     # Was 0.15 (darker content can have quieter music)
-            'weekend_binge': 0.14,  # Was 0.22
-            'general': 0.12         # Was 0.18
+            'evening_prime': 0.012,   # 1.2% - prime time mystery
+            'late_night': 0.008,      # 0.8% - late night darkness
+            'weekend_binge': 0.018,   # 1.8% - weekend engagement
+            'general': 0.012          # 1.2% - default subtle
         }
         
-        base_volume = volume_levels.get(content_type, 0.05)
+        final_volume = volume_levels.get(content_type, 0.015)
         
         # Apply volume safely
-        music = apply_volumex(music, base_volume)
+        music = apply_volumex(music, final_volume)
+
+        music = apply_fadein(music, 1.0)
+        music = apply_fadeout(music, 2.0)
         
-        print(f"   ✅ Mystery music layer created at {base_volume*100:.0f}% volume")
+        print(f"   ✅ Mystery music layer created at {final_volume*100:.0f}% volume")
         print(f"   ⏱️ Duration: {music.duration:.2f}s")
         
         return music
@@ -1110,8 +1114,7 @@ background_music = create_dynamic_music_layer(duration, data)
 
 if background_music:
     try:
-        voice_adjusted = apply_volumex(audio, 1.0)
-        music_ducked = apply_volumex(background_music, 0.1)
+        voice_adjusted = apply_volumex(audio, 1.1)
         final_audio = CompositeAudioClip([voice_adjusted, background_music])
         video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
