@@ -28,7 +28,7 @@ MUSIC_LIBRARY = {
         'duration': 108,
         'emotion': 'mysterious, dark, investigative',
         'scenes': ['investigation', 'unsolved'],
-        'volume_default': 0.18
+        'volume_default': 0.08
     },
 
     'mysterious_investigation': {
@@ -38,7 +38,7 @@ MUSIC_LIBRARY = {
         'duration': 134,
         'emotion': 'investigative, moody, mysterious',
         'scenes': ['investigation', 'true_crime'],
-        'volume_default': 0.20
+        'volume_default': 0.10
     },
 
     'noir_detective': {
@@ -48,7 +48,7 @@ MUSIC_LIBRARY = {
         'duration': 120,
         'emotion': 'noir, detective, shadowy',
         'scenes': ['investigation', 'unsolved'],
-        'volume_default': 0.16
+        'volume_default': 0.06
     },
 
     # 👻 SUSPENSEFUL TENSION (Building Suspense)
@@ -63,7 +63,7 @@ MUSIC_LIBRARY = {
         'duration': 135,
         'emotion': 'tense, building, suspenseful',
         'scenes': ['suspense', 'paranormal'],
-        'volume_default': 0.17
+        'volume_default': 0.07
     },
 
     'creeping_tension': {
@@ -73,7 +73,7 @@ MUSIC_LIBRARY = {
         'duration': 141,
         'emotion': 'creepy, tense, ominous',
         'scenes': ['suspense', 'cryptids'],
-        'volume_default': 0.15
+        'volume_default': 0.05
     },
 
     'anxious_suspense': {
@@ -83,7 +83,7 @@ MUSIC_LIBRARY = {
         'duration': 118,
         'emotion': 'anxious, nervous, unsettling',
         'scenes': ['suspense', 'paranormal'],
-        'volume_default': 0.14
+        'volume_default': 0.04
     },
 
     # 🌫️ EERIE ATMOSPHERIC (Paranormal/Supernatural)
@@ -94,7 +94,7 @@ MUSIC_LIBRARY = {
         'duration': 124,
         'emotion': 'eerie, otherworldly, haunting',
         'scenes': ['paranormal', 'supernatural'],
-        'volume_default': 0.16
+        'volume_default': 0.06
     },
 
     'ghostly_whispers': {
@@ -104,7 +104,7 @@ MUSIC_LIBRARY = {
         'duration': 149,
         'emotion': 'ghostly, ethereal, spooky',
         'scenes': ['paranormal', 'unsolved'],
-        'volume_default': 0.15
+        'volume_default': 0.05
     },
 
     'supernatural_mystery': {
@@ -114,7 +114,7 @@ MUSIC_LIBRARY = {
         'duration': 109,
         'emotion': 'supernatural, mystical, dark',
         'scenes': ['paranormal', 'ancient'],
-        'volume_default': 0.17
+        'volume_default': 0.07
     },
 
     # ⚡ DRAMATIC REVELATION (Plot Twists/Reveals)
@@ -125,7 +125,7 @@ MUSIC_LIBRARY = {
         'duration': 142,
         'emotion': 'dramatic, revealing, intense',
         'scenes': ['revelation', 'true_crime'],
-        'volume_default': 0.24
+        'volume_default': 0.10
     },
 
     'shocking_truth': {
@@ -135,7 +135,7 @@ MUSIC_LIBRARY = {
         'duration': 140,
         'emotion': 'shocking, powerful, dramatic',
         'scenes': ['revelation', 'conspiracy'],
-        'volume_default': 0.26
+        'volume_default': 0.10
     },
 
     'plot_twist': {
@@ -145,7 +145,7 @@ MUSIC_LIBRARY = {
         'duration': 88,
         'emotion': 'surprising, dramatic, intense',
         'scenes': ['revelation', 'unsolved'],
-        'volume_default': 0.25
+        'volume_default': 0.10
     },
 
     # 🏛️ ANCIENT MYSTERY (Historical/Archaeological)
@@ -156,7 +156,7 @@ MUSIC_LIBRARY = {
         'duration': 95,
         'emotion': 'ancient, mysterious, epic',
         'scenes': ['ancient', 'archaeology'],
-        'volume_default': 0.22
+        'volume_default': 0.10
     },
 
     'lost_civilization': {
@@ -166,7 +166,7 @@ MUSIC_LIBRARY = {
         'duration': 134,
         'emotion': 'epic, ancient, mysterious',
         'scenes': ['ancient', 'conspiracy'],
-        'volume_default': 0.23
+        'volume_default': 0.10
     },
 
     'archaeological_discovery': {
@@ -176,7 +176,7 @@ MUSIC_LIBRARY = {
         'duration': 116,
         'emotion': 'epic, archaeological, grand',
         'scenes': ['ancient', 'revelation'],
-        'volume_default': 0.24
+        'volume_default': 0.10
     },
 
     # 🔥 THRILLER ACTION (Chase/Danger)
@@ -187,7 +187,7 @@ MUSIC_LIBRARY = {
         'duration': 125,
         'emotion': 'intense, urgent, dangerous',
         'scenes': ['action', 'true_crime'],
-        'volume_default': 0.27
+        'volume_default': 0.10
     },
 
     'dangerous_encounter': {
@@ -197,7 +197,7 @@ MUSIC_LIBRARY = {
         'duration': 158,
         'emotion': 'dangerous, thrilling, intense',
         'scenes': ['action', 'cryptids'],
-        'volume_default': 0.26
+        'volume_default': 0.10
     },
 
     'urgent_investigation': {
@@ -207,7 +207,7 @@ MUSIC_LIBRARY = {
         'duration': 131,
         'emotion': 'urgent, fast-paced, tense',
         'scenes': ['action', 'investigation'],
-        'volume_default': 0.25
+        'volume_default': 0.10
     },
 
     # 🕯️ CONSPIRACY MOOD (Cover-ups/Secrets)
@@ -218,7 +218,7 @@ MUSIC_LIBRARY = {
         'duration': 120,
         'emotion': 'secretive, dark, conspiratorial',
         'scenes': ['conspiracy', 'cover_up'],
-        'volume_default': 0.20
+        'volume_default': 0.10
     },
 
     'hidden_truth': {
@@ -228,7 +228,7 @@ MUSIC_LIBRARY = {
         'duration': 99,
         'emotion': 'mysterious, hidden, dark',
         'scenes': ['conspiracy', 'unsolved'],
-        'volume_default': 0.19
+        'volume_default': 0.10
     },
 
     # 🌲 CRYPTID ENCOUNTERS (Unknown Creatures)
@@ -239,7 +239,7 @@ MUSIC_LIBRARY = {
         'duration': 142,
         'emotion': 'ominous, creature, wilderness',
         'scenes': ['cryptids', 'forest'],
-        'volume_default': 0.18
+        'volume_default': 0.10
     },
 
     'forest_mystery': {
@@ -249,7 +249,7 @@ MUSIC_LIBRARY = {
         'duration': 127,
         'emotion': 'forest, mysterious, wild',
         'scenes': ['cryptids', 'unexplained'],
-        'volume_default': 0.17
+        'volume_default': 0.10
     }
 }
 
