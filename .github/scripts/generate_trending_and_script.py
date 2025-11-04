@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-🔍 Generate Mystery Script - YOUTUBE SHORTS OPTIMIZED
-YouTube Shorts: MAX 60 seconds (official limit)
-Optimal: 45-60 seconds for best performance
+🔍 Generate Mystery Script - OPTIMIZED FOR MYTHICA REPORT
+Based on proven performance data: 35-45 seconds = 74-95% retention
 
-FIXED IMPROVEMENTS:
-✅ Stricter word count validation
-✅ Better error messages
-✅ Fallback script always within limits
-✅ Clear duration warnings
+OPTIMIZATION CHANGES:
+✅ Duration: 45-60s → 35-45s (proven sweet spot)
+✅ Word count: 95-126 → 74-95 (optimal range)
+✅ Minimum: 70 words (prevents <25s failures)
+✅ Category weights: 50% disappearances (94.8% retention winner)
+✅ Title bias: "Vanished" keyword (proven performer)
+✅ Fallbacks: ALL trimmed to 74-95 words
 """
 
 import os
@@ -23,22 +24,37 @@ TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 os.makedirs(TMP, exist_ok=True)
 HISTORY_FILE = os.path.join(TMP, "content_history.json")
 
-# 🎯 YOUTUBE SHORTS DURATION TARGETS - STRICT
-OPTIMAL_MIN_DURATION = 45   # Sweet spot minimum
-OPTIMAL_MAX_DURATION = 60   # YouTube Shorts official max (HARD LIMIT)
+# 🎯 MYTHICA REPORT OPTIMIZED TARGETS (Based on 94.8% retention data)
+OPTIMAL_MIN_DURATION = 35   # Sweet spot minimum (was: 45)
+OPTIMAL_MAX_DURATION = 45   # Sweet spot maximum (was: 60)
 
 # TTS Reading speed: ~2.1 words/second (mystery narrator at 0.85x speed)
 WORDS_PER_SECOND = 2.1
 
-# ✅ STRICT WORD COUNT TARGETS
-OPTIMAL_MIN_WORDS = int(OPTIMAL_MIN_DURATION * WORDS_PER_SECOND)      # ~95 words for 45s
-OPTIMAL_MAX_WORDS = int(OPTIMAL_MAX_DURATION * WORDS_PER_SECOND)      # ~126 words for 60s
-HARD_LIMIT_WORDS = int((OPTIMAL_MAX_DURATION + 2) * WORDS_PER_SECOND) # ~129 words for 62s (allow 2s buffer)
+# ✅ DATA-DRIVEN WORD COUNT TARGETS
+MINIMUM_WORDS = 70                                                    # NEW: Prevent <25s failures
+OPTIMAL_MIN_WORDS = int(OPTIMAL_MIN_DURATION * WORDS_PER_SECOND)      # 74 words for 35s
+OPTIMAL_MAX_WORDS = int(OPTIMAL_MAX_DURATION * WORDS_PER_SECOND)      # 95 words for 45s
+HARD_LIMIT_WORDS = 100                                                # Safety buffer (was: 129)
 
-print(f"🎯 YouTube Shorts Target (STRICT):")
-print(f"   ✅ Optimal: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s ({OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words)")
-print(f"   ⚠️ Hard Limit: {HARD_LIMIT_WORDS} words ({(HARD_LIMIT_WORDS/WORDS_PER_SECOND):.0f}s)")
-print(f"   🚨 REJECT: Over {HARD_LIMIT_WORDS} words (exceeds 62s)")
+# 🔥 CATEGORY WEIGHTS (Based on retention performance)
+MYSTERY_WEIGHTS = {
+    'disappearance': 0.50,    # 94.8% retention - PRIORITIZE
+    'phenomena': 0.30,        # 89.5% retention - STRONG
+    'crime': 0.15,            # 74.0% retention - GOOD
+    'historical': 0.05,       # 34.8% retention - DEPRIORITIZE
+    'conspiracy': 0.0         # Untested - AVOID
+}
+
+# 🎯 TITLE POWER WORDS (Proven performers)
+TITLE_POWER_WORDS = ['Vanished', 'Vanished', 'Vanished', 'Disappeared']
+# Note: 'Vanished' 3x more likely (your best performers all use this word)
+
+print(f"🎯 Mythica Report Optimization (PROVEN SWEET SPOT):")
+print(f"   ✅ Target: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s ({OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words)")
+print(f"   ⚠️ Minimum: {MINIMUM_WORDS} words ({(MINIMUM_WORDS/WORDS_PER_SECOND):.0f}s) - prevents too-short failures")
+print(f"   🚨 Hard Limit: {HARD_LIMIT_WORDS} words ({(HARD_LIMIT_WORDS/WORDS_PER_SECOND):.0f}s)")
+print(f"   🔥 Category Focus: {int(MYSTERY_WEIGHTS['disappearance']*100)}% Disappearances (94.8% retention)")
 
 # Configure Gemini
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
@@ -74,10 +90,10 @@ def load_history():
                 return history
         except Exception as e:
             print(f"⚠️ Could not load history: {e}")
-            return {'topics': [], 'version': '2.0_mystery'}
+            return {'topics': [], 'version': '3.0_optimized'}
     
     print("📂 No previous history found, starting fresh")
-    return {'topics': [], 'version': '2.0_mystery'}
+    return {'topics': [], 'version': '3.0_optimized'}
 
 
 def save_to_history(topic, script_hash, title, script_data):
@@ -101,7 +117,7 @@ def save_to_history(topic, script_hash, title, script_data):
     # Keep last 100 topics
     history['topics'] = history['topics'][-100:]
     history['last_updated'] = datetime.now().isoformat()
-    history['version'] = '2.0_mystery'
+    history['version'] = '3.0_optimized'
     
     with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(history, f, indent=2, ensure_ascii=False)
@@ -189,7 +205,7 @@ def validate_script_uses_trending_topic(script_data, trending_topics):
 
 
 def validate_script_data(data):
-    """✅ FIXED: Strict YouTube Shorts validation"""
+    """✅ OPTIMIZED: Mythica Report proven sweet spot validation"""
     
     required_fields = ["title", "topic", "hook", "script", "cta"]
     
@@ -200,36 +216,41 @@ def validate_script_data(data):
     if not isinstance(data["script"], str):
         raise ValueError("❌ Script must be a string (narrative text)")
     
-    # ✅ STRICT WORD COUNT VALIDATION
+    # ✅ STRICT WORD COUNT VALIDATION (OPTIMIZED RANGE)
     word_count = len(data["script"].split())
     estimated_duration = word_count / WORDS_PER_SECOND
     
     print(f"\n📊 Script Length Analysis:")
     print(f"   Words: {word_count}")
     print(f"   Estimated duration: {estimated_duration:.1f}s")
-    print(f"   Target: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s")
+    print(f"   Optimal range: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s")
     
-    # ✅ REJECT IF TOO SHORT
-    if word_count < OPTIMAL_MIN_WORDS:
+    # ✅ REJECT IF TOO SHORT (NEW - prevents <25s failures)
+    if word_count < MINIMUM_WORDS:
         print(f"   ❌ TOO SHORT: {word_count} words = {estimated_duration:.1f}s")
-        raise ValueError(f"Script too short: {word_count} words (need {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS})")
+        print(f"   💡 Your data shows videos under 25s fail (21-35% retention)")
+        raise ValueError(f"Script too short: {word_count} words (minimum {MINIMUM_WORDS})")
     
-    # ✅ REJECT IF TOO LONG (HARD LIMIT)
+    # ✅ REJECT IF TOO LONG
     if word_count > HARD_LIMIT_WORDS:
         print(f"   ❌ TOO LONG: {word_count} words = {estimated_duration:.1f}s")
-        print(f"   ⚠️ Exceeds YouTube Shorts limit!")
+        print(f"   💡 Exceeds proven sweet spot")
         raise ValueError(f"Script too long: {word_count} words (max {HARD_LIMIT_WORDS})")
     
-    # ✅ OPTIMAL RANGE
-    if word_count <= OPTIMAL_MAX_WORDS:
-        print(f"   ✅ PERFECT: {word_count} words = {estimated_duration:.1f}s (OPTIMAL)")
+    # ✅ PERFECT RANGE (35-45s sweet spot)
+    if OPTIMAL_MIN_WORDS <= word_count <= OPTIMAL_MAX_WORDS:
+        print(f"   ✅ PERFECT: {word_count} words = {estimated_duration:.1f}s (94.8% RETENTION ZONE)")
+    elif word_count < OPTIMAL_MIN_WORDS:
+        print(f"   ⚠️ ACCEPTABLE: {word_count} words = {estimated_duration:.1f}s (slightly under optimal)")
+        print(f"   💡 Could add 5-10 more words for better engagement")
     else:
         print(f"   ⚠️ ACCEPTABLE: {word_count} words = {estimated_duration:.1f}s (slightly over optimal)")
-        print(f"   💡 Recommendation: Trim to {OPTIMAL_MAX_WORDS} words for better performance")
+        print(f"   💡 Could trim to {OPTIMAL_MAX_WORDS} words for peak performance")
     
     # Store metadata
     data["estimated_duration"] = estimated_duration
     data["word_count"] = word_count
+    data["optimization_version"] = "3.0_proven_sweet_spot"
     
     # Validate title
     if len(data["title"]) > 100:
@@ -269,88 +290,135 @@ def clean_script_text(text):
     return text
 
 
+def select_weighted_mystery_type(content_type, user_mystery_type):
+    """Select mystery type based on performance weights"""
+    
+    # If user specified a type, respect it
+    if user_mystery_type and user_mystery_type != 'auto':
+        print(f"🎯 User-specified mystery type: {user_mystery_type}")
+        return user_mystery_type
+    
+    # Auto-select based on content type and weights
+    if content_type == 'evening_prime':
+        # Evening: prefer disappearances (your best performer)
+        weighted_choice = 'disappearance' if hash(str(datetime.now())) % 100 < 60 else 'phenomena'
+    elif content_type == 'late_night':
+        # Late night: prefer crime/disappearances
+        weighted_choice = 'disappearance' if hash(str(datetime.now())) % 100 < 50 else 'crime'
+    elif content_type == 'weekend_binge':
+        # Weekend: more variety, but still favor disappearances
+        rand = hash(str(datetime.now())) % 100
+        if rand < 40:
+            weighted_choice = 'disappearance'
+        elif rand < 65:
+            weighted_choice = 'phenomena'
+        elif rand < 85:
+            weighted_choice = 'crime'
+        else:
+            weighted_choice = 'historical'
+    else:
+        # General: heavily weighted to disappearances
+        rand = hash(str(datetime.now())) % 100
+        if rand < 50:
+            weighted_choice = 'disappearance'
+        elif rand < 80:
+            weighted_choice = 'phenomena'
+        elif rand < 95:
+            weighted_choice = 'crime'
+        else:
+            weighted_choice = 'historical'
+    
+    print(f"🎲 Weighted selection: {weighted_choice} (50% disappearance bias)")
+    return weighted_choice
+
+
 def get_content_type_guidance(content_type):
-    """Get specific guidance for mystery content type"""
+    """Get specific guidance for mystery content type (OPTIMIZED)"""
     guidance = {
-        'evening_prime': """
+        'evening_prime': f"""
 EVENING PRIME FOCUS (7-9 PM):
 - Target: Evening viewers unwinding, ready for intrigue
-- Mystery type: Famous mysteries, high engagement hooks
+- Mystery type: Famous disappearances, high engagement hooks
 - Tone: Accessible, intriguing, documentary-style
-- Examples: Flight 19, DB Cooper, Zodiac Killer, MH370
-- DURATION: 45-60 seconds (strict YouTube Shorts limit)
+- Examples: Flight 19, DB Cooper, Amelia Earhart, MH370
+- DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} seconds (PROVEN SWEET SPOT)
+- WORD COUNT: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
 """,
-        'late_night': """
+        'late_night': f"""
 LATE NIGHT FOCUS (10 PM - 2 AM):
 - Target: Can't sleep, scrolling in bed
-- Mystery type: Darker, more disturbing mysteries
+- Mystery type: Darker disappearances, chilling vanishings
 - Tone: Chilling, serious, thought-provoking
-- Examples: Dyatlov Pass, Elisa Lam, Somerton Man
-- DURATION: 45-60 seconds (strict YouTube Shorts limit)
+- Examples: Dyatlov Pass, Elisa Lam, Maura Murray, Brandon Swanson
+- DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} seconds (PROVEN SWEET SPOT)
+- WORD COUNT: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
 """,
-        'weekend_binge': """
+        'weekend_binge': f"""
 WEEKEND BINGE FOCUS (Sat/Sun 8-11 PM):
-- Target: More time, want depth
-- Mystery type: Complex historical mysteries
-- Tone: Documentary deep-dive
-- Examples: Voynich Manuscript, Antikythera Mechanism
-- DURATION: 45-60 seconds (YouTube Shorts limit)
+- Target: More time, want compelling mysteries
+- Mystery type: Complex disappearances with multiple theories
+- Tone: Documentary deep-dive but concise
+- Examples: Malaysia Airlines 370, Sodder Children, Springfield Three
+- DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} seconds (PROVEN SWEET SPOT)
+- WORD COUNT: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
 """,
-        'general': """
+        'general': f"""
 GENERAL MYSTERY FOCUS:
 - Target: General mystery enthusiasts
-- Mystery type: Balanced mix
+- Mystery type: Famous disappearances and vanishings
 - Tone: Mysterious but accessible
-- Examples: Bermuda Triangle, Oak Island, Roanoke
-- DURATION: 45-60 seconds (strict YouTube Shorts limit)
+- Examples: Bermuda Triangle vanishings, D.B. Cooper, Roanoke Colony
+- DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} seconds (PROVEN SWEET SPOT)
+- WORD COUNT: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
 """
     }
     return guidance.get(content_type, guidance['general'])
 
 
 def get_mystery_type_guidance(mystery_type):
-    """Get guidance for mystery category"""
+    """Get guidance for mystery category (OPTIMIZED FOR SWEET SPOT)"""
     types = {
-        'disappearance': """
-DISAPPEARANCE MYSTERIES:
+        'disappearance': f"""
+DISAPPEARANCE MYSTERIES (94.8% RETENTION - YOUR BEST PERFORMER):
 - Focus: Vanishing without a trace
 - Hook formula: "[Date], [Location]. [Person/Group] vanished. [Impossible detail]."
 - Key elements: Last known location, search efforts, zero evidence
-- Examples: Flight 19, DB Cooper, Mary Celeste, Amelia Earhart
-- LENGTH: Strict 45-60s YouTube Shorts
+- Examples: Flight 19, DB Cooper, Mary Celeste, Amelia Earhart, Maura Murray
+- MANDATORY: Use "Vanished" or "Disappeared" in title (proven high retention)
+- LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
 """,
-        'crime': """
+        'crime': f"""
 TRUE CRIME MYSTERIES:
-- Focus: Unsolved murders, cold cases
-- Hook formula: "A body was found in [Location]. What investigators discovered was impossible."
-- Key elements: Evidence that doesn't add up, multiple theories
+- Focus: Unsolved murders, cold cases with vanishing elements
+- Hook formula: "A body was found in [Location]. Then the evidence vanished."
+- Key elements: Evidence that doesn't add up, missing pieces
 - Examples: Zodiac Killer, Black Dahlia, Somerton Man
 - ETHICAL: Focus on mystery aspect, respect victims
-- LENGTH: Strict 45-60s YouTube Shorts
+- LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
 """,
-        'historical': """
-HISTORICAL ENIGMAS:
-- Focus: Ancient artifacts, unexplained discoveries
-- Hook formula: "In [Year], they discovered [Object]. Scientists still can't explain it."
-- Key elements: Technology that shouldn't exist
-- Examples: Antikythera Mechanism, Voynich Manuscript, Göbekli Tepe
-- LENGTH: Strict 45-60s YouTube Shorts
+        'phenomena': f"""
+UNEXPLAINED PHENOMENA (89.5% RETENTION - STRONG PERFORMER):
+- Focus: Strange occurrences, mysterious signals, impossible events
+- Hook formula: "In [Year], something appeared/vanished. Scientists can't explain it."
+- Key elements: Verified phenomena, multiple witnesses, no explanation
+- Examples: The Hum, Wow Signal, Hessdalen Lights, Ball Lightning
+- LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
 """,
-        'conspiracy': """
-DECLASSIFIED CONSPIRACIES:
-- Focus: Proven conspiracies with documents
-- Hook formula: "Declassified documents prove [Operation] was real."
-- Key elements: Government documents, verified facts
-- Examples: MKUltra, Operation Northwoods, Tuskegee
-- WARNING: ONLY proven conspiracies
-- LENGTH: Strict 45-60s YouTube Shorts
+        'historical': f"""
+HISTORICAL ENIGMAS (USE SPARINGLY - 34.8% retention):
+- Focus: Ancient disappearances, lost civilizations ONLY
+- Hook formula: "An entire civilization vanished. No one knows why."
+- Key elements: Lost cities, vanished peoples, unexplained abandonment
+- Examples: Roanoke Colony, Angikuni Lake, Lost Colony of Greenland
+- WARNING: Lower retention - use only 5% of the time
+- LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
 """
     }
     return types.get(mystery_type, types['disappearance'])
 
 
 def build_mystery_prompt(content_type, priority, mystery_type, trends, history):
-    """Build the mystery script generation prompt (YOUTUBE SHORTS OPTIMIZED)"""
+    """Build the mystery script generation prompt (OPTIMIZED FOR MYTHICA REPORT)"""
     
     previous_topics = [f"{t.get('topic', 'unknown')}: {t.get('title', '')}" for t in history['topics'][-20:]]
     previous_titles = [t.get('title', '') for t in history['topics'][-30:]]
@@ -389,16 +457,24 @@ YOU MUST USE ONE OF THESE REAL TRENDING TOPICS - NOT YOUR OWN INVENTION!
     content_type_guidance = get_content_type_guidance(content_type)
     mystery_type_guidance = get_mystery_type_guidance(mystery_type)
     
-    prompt = f"""You are an expert mystery storyteller creating YOUTUBE SHORTS.
+    prompt = f"""You are an expert mystery storyteller for MYTHICA REPORT.
 
-🎯 CRITICAL YOUTUBE SHORTS REQUIREMENTS (STRICT ENFORCEMENT):
+🎯 CRITICAL REQUIREMENTS (PROVEN 94.8% RETENTION FORMULA):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-TARGET DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} SECONDS (HARD LIMIT)
-TARGET WORDS: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words
-ABSOLUTE MAXIMUM: {HARD_LIMIT_WORDS} words ({(HARD_LIMIT_WORDS/WORDS_PER_SECOND):.0f}s)
+TARGET DURATION: {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION} SECONDS (PROVEN SWEET SPOT)
+TARGET WORDS: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
+MINIMUM: {MINIMUM_WORDS} words (prevents failure mode)
+ABSOLUTE MAXIMUM: {HARD_LIMIT_WORDS} words
 
 TTS Speed: {WORDS_PER_SECOND} words/second
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ DATA-PROVEN REQUIREMENTS:
+- Videos 35-45s = 74-95% retention ✅
+- Videos under 25s = 21-35% retention ❌
+- "Vanished" in title = high performance ✅
+- Disappearance mysteries = 94.8% retention ✅
+- Historical mysteries = 34.8% retention ⚠️
 
 CONTEXT:
 - Content type: {content_type}
@@ -414,28 +490,31 @@ PREVIOUSLY COVERED (DO NOT REPEAT):
 
 {mystery_type_guidance}
 
-SCRIPT STRUCTURE:
+SCRIPT STRUCTURE (OPTIMIZED FOR {OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s):
 
 🎬 HOOK (0-5 seconds, 8-12 words):
 Formula: "[Date], [Location]. [Vanished/Found/Discovered]. [Impossible detail]."
 Example: "December 5th, 1945. Five planes vanished. No wreckage found."
+MANDATORY: Use "Vanished" or "Disappeared" (proven high retention)
 
-🎬 SETUP (15-20 words):
-WHO, WHAT, WHEN, WHERE
+🎬 SETUP (10-15 words):
+WHO, WHAT, WHEN, WHERE - ultra-concise
 
-🎬 INCIDENT (35-45 words):
+🎬 INCIDENT (25-35 words):
 What happened. Keep sentences SHORT. Build tension FAST.
 
-🎬 CONTRADICTION (30-40 words):
+🎬 CONTRADICTION (20-30 words):
 "But here's where it gets strange..."
 Stack impossibilities. Facts that don't add up.
 
-🎬 TWIST (20-30 words):
+🎬 TWIST (15-20 words):
 "The most terrifying part?"
 Save best detail for last.
 
-🎬 CLIFFHANGER (10-15 words):
+🎬 CLIFFHANGER (8-12 words):
 "To this day..." Open question.
+
+TOTAL TARGET: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} WORDS
 
 MANDATORY REQUIREMENTS:
 ✅ Write as FLOWING NARRATIVE (conversational)
@@ -444,26 +523,27 @@ MANDATORY REQUIREMENTS:
 ✅ Specific details (dates, names, numbers)
 ✅ Build to impossible contradiction
 ✅ Leave mystery UNSOLVED
-✅ STAY UNDER {HARD_LIMIT_WORDS} WORDS (MAXIMUM)
+✅ STAY BETWEEN {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} WORDS
+✅ Use "Vanished" or "Disappeared" in title (proven performer)
 ✅ Use \\n\\n between paragraphs
 
 AVOID:
-❌ Going over {HARD_LIMIT_WORDS} words (automatic rejection!)
+❌ Going under {MINIMUM_WORDS} words (automatic failure!)
+❌ Going over {HARD_LIMIT_WORDS} words (exceeds sweet spot!)
 ❌ Long explanations or setup
 ❌ Generic descriptions
 ❌ Lists or bullet points
 ❌ Unverified theories
 ❌ Special characters in JSON
-❌ "Today I'll tell you..." (wastes seconds!)
 
 OUTPUT FORMAT (JSON ONLY):
 {{
-  "title": "The [Mystery]: [Intriguing Statement]",
+  "title": "The [Mystery]: [Use VANISHED or DISAPPEARED]",
   "topic": "mystery",
-  "hook": "[8-12 words max]",
-  "script": "[Full narrative - {OPTIMAL_MIN_WORDS} to {HARD_LIMIT_WORDS} words with \\n\\n paragraphs]",
+  "hook": "[8-12 words max with VANISHED/DISAPPEARED]",
+  "script": "[Full narrative - {OPTIMAL_MIN_WORDS} to {OPTIMAL_MAX_WORDS} words with \\n\\n paragraphs]",
   "cta": "[Question under 12 words]",
-  "hashtags": ["#mystery", "#unsolved", "#truecrime", "#shorts"],
+  "hashtags": ["#mystery", "#unsolved", "#vanished", "#shorts"],
   "description": "[2 sentences for YouTube]",
   "key_phrase": "[3-5 CAPS words for thumbnail]",
   "mystery_category": "{mystery_type}",
@@ -475,108 +555,115 @@ OUTPUT FORMAT (JSON ONLY):
   ]
 }}
 
-EXAMPLE (STRICT 60-SECOND LIMIT):
+EXAMPLE (PERFECT 35-45s RANGE):
 {{
-  "title": "Flight 19: Vanished Without Trace",
+  "title": "The Man Who Vanished Mid-Flight",
   "topic": "mystery",
-  "hook": "December 5th, 1945. Five planes vanished. No wreckage.",
-  "script": "Five torpedo bombers took off from Fort Lauderdale. Routine training mission. Fourteen experienced crew. Perfect weather.\\n\\nTwo hours later, Lieutenant Taylor radioed controllers. 'We can't find west. Everything looks wrong.' All five planes. Compasses malfunctioning. Simultaneously.\\n\\nThe Navy launched history's biggest search. Two hundred forty thousand square miles. Three hundred aircraft. Five straight days.\\n\\nBut here's where it gets strange. Zero debris. No oil slicks. No wreckage. Nothing. Five massive planes. Gone. As if they never existed.\\n\\nThe most terrifying part? The rescue plane sent to find them? Also vanished. Same night. Thirteen more crew. No distress call.\\n\\nTo this day, twenty-seven men and six aircraft. Zero evidence. The Navy's conclusion: 'as if they flew to Mars.'",
-  "cta": "What do you think happened to them?",
-  "hashtags": ["#flight19", "#bermudatriangle", "#mystery", "#unsolved", "#shorts"],
-  "description": "December 5, 1945: Flight 19 disappeared. The rescue plane vanished too. 27 men, 6 aircraft, zero evidence.",
-  "key_phrase": "FLIGHT 19",
+  "hook": "November 24th, 1971. D.B. Cooper vanished mid-air.",
+  "script": "A man in a suit boarded Flight 305. Seattle to Portland. Ordered a bourbon. Calm. Normal.\\n\\nMid-flight, he handed the flight attendant a note. 'I have a bomb.' Showed her a briefcase. Red wires. She believed him.\\n\\nCooper demanded two hundred thousand dollars. Four parachutes. Plane landed. FBI delivered everything. Passengers released. Plane took off again.\\n\\nBut here's where it gets strange. Somewhere over Washington, Cooper opened the rear stairs. Jumped. At night. In a rainstorm. Ten thousand feet. Wearing a business suit.\\n\\nThe most terrifying part? Despite the largest FBI manhunt in history, Cooper vanished. No body. No parachute. No evidence. Just twenty dollar bills found in a river nine years later.\\n\\nTo this day, D.B. Cooper remains the only unsolved hijacking in American history.",
+  "cta": "Do you think he survived the jump?",
+  "hashtags": ["#dbcooper", "#vanished", "#mystery", "#unsolved", "#shorts"],
+  "description": "November 24, 1971: D.B. Cooper hijacked a plane, took the ransom, and vanished mid-air. The FBI never found him.",
+  "key_phrase": "D.B. COOPER",
   "mystery_category": "disappearance",
   "visual_prompts": [
-    "Film noir: vintage 1940s torpedo bombers in formation over ocean, dramatic clouds, noir aesthetic",
-    "Film noir: old military radio equipment, dramatic lighting, noir documentary style",
-    "Film noir: vast empty ocean aerial view, foggy and mysterious, no wreckage",
-    "Film noir: vintage search map with red pins, classified document aesthetic"
+    "Film noir: 1970s airplane interior, dramatic shadows, vintage aesthetic",
+    "Film noir: briefcase with money, noir lighting, mysterious mood",
+    "Film noir: open airplane rear stairs at night, stormy sky, dramatic",
+    "Film noir: FBI wanted poster, noir documentary style, unsolved case"
   ]
 }}
 
-🚨 CRITICAL: STAY UNDER {HARD_LIMIT_WORDS} WORDS OR IT WILL BE REJECTED!
+🚨 CRITICAL WORD COUNT REQUIREMENTS:
+- MINIMUM: {MINIMUM_WORDS} words (prevents too-short failures)
+- OPTIMAL: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words (94.8% retention zone)
+- MAXIMUM: {HARD_LIMIT_WORDS} words (hard limit)
 
-Generate the mystery story NOW.
+🎯 TITLE REQUIREMENTS:
+- MUST include "Vanished" or "Disappeared" (proven high retention)
+- Format: "The [Subject]: [Use Vanished/Disappeared + Impossible Detail]"
+
+Generate the mystery story NOW. Target {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words.
 """
 
     return prompt
 
 
 def get_fallback_script(content_type, mystery_type):
-    """Fallback scripts - ALL guaranteed under 60 seconds"""
+    """Fallback scripts - ALL OPTIMIZED to 74-95 word sweet spot"""
     
     fallback_scripts = {
         'evening_prime': {
-            'title': "Flight 19: Vanished Without Trace",
-            'hook': "December 5th, 1945. Five planes vanished. No wreckage.",
-            'script': """Five torpedo bombers took off from Fort Lauderdale. Routine training mission. Fourteen experienced crew. Perfect weather.
+            'title': "Flight 19: Five Planes That Vanished",
+            'hook': "December 5th, 1945. Five planes vanished without trace.",
+            'script': """Five torpedo bombers left Fort Lauderdale. Routine training. Fourteen experienced crew. Perfect weather.
 
-Two hours later, Lieutenant Taylor radioed controllers. 'We can't find west. Everything looks wrong.' All five planes. Compasses malfunctioning. Simultaneously.
+Two hours later, Lieutenant Taylor radioed. 'We can't find west. Everything looks wrong.' All compasses failed. Simultaneously.
 
-The Navy launched history's biggest search. Two hundred forty thousand square miles. Three hundred aircraft. Five straight days.
+The Navy launched the biggest search in history. Two hundred forty thousand square miles. Three hundred aircraft. Five days straight.
 
-But here's where it gets strange. Zero debris. No oil slicks. No wreckage. Nothing. Five massive planes. Gone.
+But here's where it gets strange. Zero debris. No oil slicks. Nothing. Five massive planes. Gone.
 
-The most terrifying part? The rescue plane sent to find them? Also vanished. Same night. Thirteen more crew.
+The most terrifying part? The rescue plane vanished too. Same night. Thirteen more crew.
 
-To this day, twenty-seven men and six aircraft. Zero evidence.""",
+To this day, twenty-seven men and six aircraft. No evidence. As if they flew to Mars.""",
             'key_phrase': "FLIGHT 19",
             'mystery_category': 'disappearance'
         },
         
         'late_night': {
-            'title': "Dyatlov Pass: Nine Dead Hikers",
+            'title': "The Hikers Who Vanished On Dead Mountain",
             'hook': "February 1959. Nine hikers died. Explanation impossible.",
-            'script': """Nine experienced hikers. Ural Mountains. February 2nd, 1959. They set up camp on Kholat Syakhl. Dead Mountain.
+            'script': """Nine experienced hikers entered the Ural Mountains. February 2nd, 1959. They set up camp on Dead Mountain.
 
-They never came back.
+They never returned.
 
-Search teams found their tent February 26th. Ripped open. From the inside. Boots still inside. Supplies untouched. Hikers? Gone.
+Search teams found their tent February 26th. Ripped open from inside. Boots still there. Supplies untouched. Hikers gone.
 
-Bodies found at forest edge. Barefoot. Freezing temperatures. Dead from hypothermia. Then three more in a ravine. Fractured skulls. Broken ribs.
+Bodies found at forest edge. Barefoot. Freezing temperatures. Then three more in a ravine. Fractured skulls. Broken ribs.
 
-But here's where it gets strange. Injuries equivalent to a car crash. But no external wounds. No signs of struggle.
+But here's where it gets strange. Injuries equivalent to car crash. No external wounds. No struggle.
 
-The most terrifying part? Witnesses reported glowing orange orbs in the sky that night. The Soviet investigation concluded: unknown force.
+The most terrifying part? Witnesses reported glowing orange orbs that night. Soviet investigation concluded: unknown force.
 
-To this day, no explanation exists.""",
+To this day, no explanation.""",
             'key_phrase': "DYATLOV PASS",
             'mystery_category': 'crime'
         },
         
         'weekend_binge': {
-            'title': "Voynich: The Unreadable Book",
-            'hook': "A 600-year-old book. Written in unknown language.",
-            'script': """1912. Italian villa. Book dealer Wilfrid Voynich discovered a medieval manuscript. Two hundred forty pages. Bizarre illustrations. Plants that don't exist. Impossible astronomical charts.
+            'title': "Malaysia 370: The Plane That Vanished",
+            'hook': "March 8th, 2014. Boeing 777 vanished. Two hundred thirty-nine souls.",
+            'script': """Malaysia Airlines Flight 370. Kuala Lumpur to Beijing. Experienced crew. Perfect conditions. Routine flight.
 
-Carbon dating confirmed it. Early 15th century. Over six hundred years old. Written on real vellum. Medieval ink. Not a hoax.
+One seventeen AM. 'Good night Malaysian three seven zero.' Last transmission. Then silence.
 
-World War Two codebreakers tried decoding it. The NSA tried. Computer algorithms failed. Text follows language patterns. Grammar. Structure. But words? Complete gibberish.
+Radar showed the plane turning. Away from Beijing. Flying for seven more hours. Then nothing.
 
-But here's where it gets strange. Plants don't match any known species. Impossible hybrids. Star charts show constellations that don't exist.
+But here's where it gets strange. Transponders disabled. Communications cut. Manual actions. Someone did this deliberately.
 
-The most terrifying part? Linguistic analysis proves it's not random. Too much structure. Too much consistency. Someone spent years writing this.
+The most terrifying part? Despite the largest search in aviation history, the plane vanished. Deepest ocean. No black box. No answers.
 
-After six hundred years and countless experts, no one can read a single word.""",
-            'key_phrase': "VOYNICH MANUSCRIPT",
-            'mystery_category': 'historical'
+To this day, families wait. Two hundred thirty-nine people. Gone.""",
+            'key_phrase': "MH370",
+            'mystery_category': 'disappearance'
         },
         
         'general': {
-            'title': "Bermuda Triangle: Where Ships Vanish",
-            'hook': "Hundreds of ships. All vanished without trace.",
-            'script': """The Bermuda Triangle. Miami to Bermuda to Puerto Rico. Past century? Fifty ships. Twenty aircraft. Disappeared. No wreckage. No signals. Gone.
+            'title': "The Ship Where Everyone Vanished",
+            'hook': "December 1872. A ship found drifting. Crew vanished.",
+            'script': """The Mary Celeste. Seaworthy vessel. Experienced captain. His wife and daughter aboard. Seven crew members.
 
-December 1945. Flight 19. Five bombers vanished. The rescue plane? Also disappeared. March 1918. USS Cyclops. Three hundred nine crew. Vanished. No SOS.
+December 4th, 1872. Another ship spotted her. Sails set. Cargo intact. Drifting aimlessly.
 
-Weather doesn't explain it. No more storms than elsewhere. Magnetic anomalies? Normal. Methane gas? No evidence. Rogue waves? They don't erase radio signals.
+They boarded. No one there. Food on tables. Half-eaten. Captain's log updated that morning. Navigation equipment working. Lifeboat missing.
 
-But here's where it gets strange. Ships lose radio contact suddenly. No mayday. No beacons. Just silence. Search teams find nothing. No debris. No oil. As if vessels ceased to exist.
+But here's where it gets strange. No signs of struggle. No piracy. No storm damage. Everyone just vanished.
 
-The most terrifying part? It still happens. 2015. El Faro disappeared. Thirty-three crew. Modern systems. Satellite comms. Recording ends abruptly. Mid-transmission.
+The most terrifying part? The ship was seaworthy. Could sail for weeks. Why abandon perfectly?
 
-What happens in the Bermuda Triangle?""",
-            'key_phrase': "BERMUDA TRIANGLE",
+To this day, ten people gone. No bodies. No explanation.""",
+            'key_phrase': "MARY CELESTE",
             'mystery_category': 'disappearance'
         }
     }
@@ -588,7 +675,7 @@ What happens in the Bermuda Triangle?""",
     word_count = len(selected['script'].split())
     estimated_duration = word_count / WORDS_PER_SECOND
     
-    print(f"   ✅ Fallback: {word_count} words = {estimated_duration:.1f}s (WITHIN LIMIT)")
+    print(f"   ✅ Fallback: {word_count} words = {estimated_duration:.1f}s (OPTIMIZED)")
     
     return {
         'title': selected['title'],
@@ -598,8 +685,8 @@ What happens in the Bermuda Triangle?""",
         'key_phrase': selected['key_phrase'],
         'mystery_category': selected.get('mystery_category', 'disappearance'),
         'cta': 'What do you think happened?',
-        'hashtags': ['#mystery', '#unsolved', '#truecrime', '#shorts'],
-        'description': f"{selected['title']} - An unsolved mystery that defies explanation. #mystery #unsolved #shorts",
+        'hashtags': ['#mystery', '#unsolved', '#vanished', '#shorts'],
+        'description': f"{selected['title']} - An unsolved mystery that defies explanation. #mystery #vanished #shorts",
         'visual_prompts': [
             'Film noir: vintage historical photograph, dark moody lighting, noir aesthetic',
             'Film noir: evidence scene, shadowy mysterious, noir photography',
@@ -612,24 +699,25 @@ What happens in the Bermuda Triangle?""",
         'word_count': word_count,
         'estimated_duration': estimated_duration,
         'is_fallback': True,
+        'optimization_version': '3.0_proven_sweet_spot',
         'generated_at': datetime.now().isoformat(),
         'niche': 'mystery'
     }
 
 
 def generate_mystery_script():
-    """Main script generation function (YOUTUBE SHORTS OPTIMIZED)"""
+    """Main script generation function (OPTIMIZED FOR MYTHICA REPORT)"""
     
     content_type = os.getenv('CONTENT_TYPE', 'evening_prime')
     priority = os.getenv('PRIORITY', 'medium')
-    mystery_type = os.getenv('MYSTERY_TYPE', 'auto')
+    user_mystery_type = os.getenv('MYSTERY_TYPE', 'auto')
     
     print(f"\n{'='*70}")
-    print(f"🔍 GENERATING YOUTUBE SHORTS MYSTERY SCRIPT")
+    print(f"🔍 GENERATING MYTHICA REPORT SCRIPT (OPTIMIZED)")
     print(f"{'='*70}")
     print(f"📍 Content Type: {content_type}")
     print(f"⭐ Priority: {priority}")
-    print(f"🎭 Mystery Type: {mystery_type}")
+    print(f"🎭 User Mystery Type: {user_mystery_type}")
     
     history = load_history()
     trends = load_trending()
@@ -639,16 +727,9 @@ def generate_mystery_script():
     else:
         print("⚠️ No trending data available")
     
-    if mystery_type == 'auto':
-        if content_type == 'evening_prime':
-            mystery_type = 'disappearance'
-        elif content_type == 'late_night':
-            mystery_type = 'crime'
-        elif content_type == 'weekend_binge':
-            mystery_type = 'historical'
-        else:
-            mystery_type = 'disappearance'
-        print(f"   Auto-selected: {mystery_type}")
+    # Select mystery type with weighting
+    mystery_type = select_weighted_mystery_type(content_type, user_mystery_type)
+    print(f"🎯 Final mystery type: {mystery_type}")
     
     prompt = build_mystery_prompt(content_type, priority, mystery_type, trends, history)
     
@@ -673,6 +754,7 @@ def generate_mystery_script():
             data["content_type"] = content_type
             data["priority"] = priority
             data["mystery_category"] = mystery_type
+            data["optimization_version"] = "3.0_proven_sweet_spot"
             data["generated_at"] = datetime.now().isoformat()
             data["niche"] = "mystery"
             
@@ -681,11 +763,17 @@ def generate_mystery_script():
             data["cta"] = clean_script_text(data["cta"])
             data["script"] = clean_script_text(data["script"])
             
+            # Verify "Vanished" or "Disappeared" in title (proven performer)
+            if 'vanish' not in data['title'].lower() and 'disappear' not in data['title'].lower():
+                print("⚠️ Title missing 'Vanished/Disappeared' - adding to hashtags for boost")
+                if '#vanished' not in [h.lower() for h in data.get('hashtags', [])]:
+                    data['hashtags'] = ['#vanished'] + data.get('hashtags', [])
+            
             if "hashtags" not in data or not data["hashtags"]:
-                data["hashtags"] = ["#mystery", "#unsolved", "#truecrime", "#shorts"]
+                data["hashtags"] = ["#mystery", "#unsolved", "#vanished", "#shorts"]
             
             if "description" not in data:
-                data["description"] = f"{data['title']} - {data['hook']} #mystery #unsolved #shorts"
+                data["description"] = f"{data['title']} - {data['hook']} #mystery #vanished #shorts"
             
             if "visual_prompts" not in data or len(data["visual_prompts"]) < 4:
                 data["visual_prompts"] = [
@@ -721,7 +809,8 @@ def generate_mystery_script():
             
             print(f"\n✅ SCRIPT GENERATED & VALIDATED")
             print(f"   Title: {data['title']}")
-            print(f"   Duration: ~{data['estimated_duration']:.1f}s ✅")
+            print(f"   Duration: ~{data['estimated_duration']:.1f}s")
+            print(f"   Optimization: v3.0 (proven sweet spot)")
             
             break
             
@@ -733,6 +822,9 @@ def generate_mystery_script():
         
         except ValueError as e:
             print(f"❌ Attempt {attempt} failed: {e}")
+            if attempt < max_attempts:
+                import time
+                time.sleep(2**attempt)
         
         except Exception as e:
             print(f"❌ Attempt {attempt} failed: {type(e).__name__} - {e}")
@@ -753,14 +845,14 @@ def generate_mystery_script():
     print(f"\n💾 Saved to {script_path}")
     
     print(f"\n{'='*70}")
-    print(f"✅ YOUTUBE SHORTS SCRIPT READY")
+    print(f"✅ MYTHICA REPORT SCRIPT READY (OPTIMIZED)")
     print(f"{'='*70}")
     print(f"Words: {data['word_count']}")
     print(f"Duration: {data['estimated_duration']:.1f}s")
-    if data['estimated_duration'] <= OPTIMAL_MAX_DURATION:
-        print(f"Status: ✅ PERFECT FOR YOUTUBE SHORTS")
-    else:
-        print(f"Status: ⚠️ ACCEPTABLE (slightly over optimal)")
+    if OPTIMAL_MIN_WORDS <= data['word_count'] <= OPTIMAL_MAX_WORDS:
+        print(f"Status: ✅ PERFECT (94.8% retention zone)")
+    elif data['word_count'] >= MINIMUM_WORDS:
+        print(f"Status: ✅ ACCEPTABLE (within limits)")
     
     return data
 
