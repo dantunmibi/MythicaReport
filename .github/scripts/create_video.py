@@ -949,12 +949,12 @@ def create_dynamic_music_layer(audio_duration, script_data):
         # ✅ FIXED: Use safe trim function
         music = trim_audio_safe(music, audio_duration)
         
-        # ✅ PROFESSIONAL MYSTERY AUDIO MIX
+        # ✅ OPTION A: AGGRESSIVE FIX - Music barely audible (subscriber complaints resolved)
         volume_levels = {
-            'evening_prime': 0.0005,   # 1.2% - prime time mystery
-            'late_night': 0.0004,      # 0.8% - late night darkness
-            'weekend_binge': 0.0007,   # 1.8% - weekend engagement
-            'general': 0.0005          # 1.2% - default subtle
+            'evening_prime': 0.00025,  # 0.025% - whisper quiet (was 0.0005)
+            'late_night': 0.0002,      # 0.020% - barely there (was 0.0004)
+            'weekend_binge': 0.0003,   # 0.030% - very subtle (was 0.0007)
+            'general': 0.00025         # 0.025% - default whisper (was 0.0005)
         }
         
         final_volume = volume_levels.get(content_type, 0.0005)
@@ -1114,8 +1114,9 @@ background_music = create_dynamic_music_layer(duration, data)
 
 if background_music:
     try:
-        voice_adjusted = apply_volumex(audio, 1.35)
-        final_audio = CompositeAudioClip([voice_adjusted, background_music])
+        # ✅ OPTION A: No voice boost - let narration speak naturally at 100%
+        # Music is now so quiet (0.02-0.03%) that voice dominates without boosting
+        final_audio = CompositeAudioClip([audio, background_music])
         video = video.with_audio(final_audio)
         print(f"   ✅ Audio: TTS + Dark ambient music")
     except Exception as e:
