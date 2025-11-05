@@ -880,7 +880,10 @@ def ensure_music_downloaded():
 
 
 def create_dynamic_music_layer(audio_duration, script_data):
-    """✅ FIXED: Create music layer with dark ambient/tension music"""
+    """
+    ✅ FIXED: Create music layer with GUARANTEED volume reduction
+    Uses pydub for reliable normalization before MoviePy processing
+    """
     
     if not MUSIC_AVAILABLE:
         print("⚠️ Music system unavailable, skipping background music")
@@ -937,44 +940,62 @@ def create_dynamic_music_layer(audio_duration, script_data):
     print(f"   📁 Path: {music_path}")
     
     try:
-        music = AudioFileClip(music_path)
+        # ✅ CRITICAL FIX: Use pydub to normalize and reduce volume BEFORE MoviePy
+        print("   🔧 Pre-processing music with pydub (guaranteed volume control)...")
         
-        if music.duration < audio_duration:
-            loops_needed = int(audio_duration / music.duration) + 1
-            print(f"   🔁 Looping music {loops_needed}x")
-            
-            music_clips = [music] * loops_needed
-            music = concatenate_audioclips(music_clips)
+        # Load music with pydub
+        music_audio = AudioSegment.from_file(music_path)
         
-        # ✅ FIXED: Use safe trim function
-        music = trim_audio_safe(music, audio_duration)
+        # 1. Normalize to consistent baseline (-20 dBFS = comfortable background level)
+        print(f"      Original loudness: {music_audio.dBFS:.1f} dBFS")
+        target_dBFS = -20.0
+        change_in_dBFS = target_dBFS - music_audio.dBFS
+        normalized_music = music_audio.apply_gain(change_in_dBFS)
+        print(f"      Normalized to: {normalized_music.dBFS:.1f} dBFS")
         
-        # ✅ OPTION A: AGGRESSIVE FIX - Music barely audible (subscriber complaints resolved)
-        volume_levels = {
-            'evening_prime': 0.00025,  # 0.025% - whisper quiet (was 0.0005)
-            'late_night': 0.0002,      # 0.020% - barely there (was 0.0004)
-            'weekend_binge': 0.0003,   # 0.030% - very subtle (was 0.0007)
-            'general': 0.00025         # 0.025% - default whisper (was 0.0005)
-        }
+        # 2. Reduce to whisper-quiet background (-45 dBFS = barely audible under voice)
+        final_reduction_dB = -25.0  # Additional 25dB reduction
+        quiet_music = normalized_music - abs(final_reduction_dB)
+        print(f"      Final background level: {quiet_music.dBFS:.1f} dBFS (whisper quiet)")
         
-        final_volume = volume_levels.get(content_type, 0.0005)
+        # 3. Loop if needed
+        music_duration_ms = len(quiet_music)
+        target_duration_ms = int(audio_duration * 1000)
         
-        # Apply volume safely
-        music = apply_volumex(music, final_volume)
-
-        music = apply_fadein(music, 1.5)
-        music = apply_fadeout(music, 1.5)
+        if music_duration_ms < target_duration_ms:
+            loops_needed = (target_duration_ms // music_duration_ms) + 1
+            print(f"      🔁 Looping music {loops_needed}x to match {audio_duration:.1f}s")
+            quiet_music = quiet_music * loops_needed
         
-        print(f"   ✅ Mystery music layer created at {final_volume*100:.0f}% volume")
-        print(f"   ⏱️ Duration: {music.duration:.2f}s")
+        # 4. Trim to exact duration
+        quiet_music = quiet_music[:target_duration_ms]
         
-        return music
+        # 5. Apply fade in/out (1.5 seconds each)
+        fade_duration_ms = 1500
+        quiet_music = quiet_music.fade_in(fade_duration_ms).fade_out(fade_duration_ms)
+        
+        # 6. Export to temporary file
+        temp_music_path = register_temp_file(os.path.join(TMP, f"music_processed_{time.time()}.mp3"))
+        quiet_music.export(temp_music_path, format="mp3", bitrate="128k")
+        print(f"      ✅ Pre-processed music saved: {temp_music_path}")
+        
+        # 7. Load into MoviePy (volume already controlled by pydub)
+        music_clip = AudioFileClip(temp_music_path)
+        
+        # Safety: Apply minimal MoviePy volume (0.5 = 50% of already-quiet audio)
+        music_clip = apply_volumex(music_clip, 0.5)
+        
+        print(f"   ✅ Mystery music layer created (pydub-normalized)")
+        print(f"   ⏱️ Duration: {music_clip.duration:.2f}s")
+        print(f"   🔊 Final level: ~-45 dBFS (whisper quiet, won't overpower voice)")
+        
+        return music_clip
+        
     except Exception as e:
         print(f"⚠️ Music creation failed: {e}")
         import traceback
         traceback.print_exc()
         return None
-
 
 # --- Scene Generation ---
 

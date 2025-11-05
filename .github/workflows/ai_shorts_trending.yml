@@ -240,6 +240,11 @@ jobs:
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
         run: python .github/scripts/create_video.py
 
+      - name: 🎵 Verify audio mix levels
+        run: |
+          echo "Checking audio levels in final video..."
+          ffmpeg -i tmp/short.mp4 -af "volumedetect" -f null - 2>&1 | grep "mean_volume"
+
       - name: 🖼️ Generate mysterious thumbnail
         if: steps.schedule_check.outputs.should_post == 'true'
         env:

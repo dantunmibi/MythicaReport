@@ -43,6 +43,21 @@ except Exception as e:
 TMP = os.getenv("GITHUB_WORKSPACE", ".") + "/tmp"
 os.makedirs(TMP, exist_ok=True)
 
+def load_history():
+    """Load content history from previous runs"""
+    history_file = os.path.join(TMP, "content_history.json")
+    if os.path.exists(history_file):
+        try:
+            with open(history_file, 'r', encoding='utf-8') as f:
+                history = json.load(f)
+                print(f"📂 Loaded {len(history.get('topics', []))} topics from history")
+                return history
+        except Exception as e:
+            print(f"⚠️ Could not load history: {e}")
+            return {'topics': [], 'version': '3.0_optimized'}
+    
+    print("📂 No previous history found, starting fresh")
+    return {'topics': [], 'version': '3.0_optimized'}
 
 def get_google_trends_mystery() -> List[str]:
     """Get real trending mystery-related searches from Google Trends"""
@@ -427,16 +442,22 @@ TASK: Select the TOP 5 topics from the RAW list above that are NOT in the "recen
 
 SELECTION CRITERIA (ranked by importance):
 1.  **Hook Potential:** The story must have an incredibly strong, mysterious opening. A question or a shocking statement.
-2.  **Narrative Arc:** Can a compelling mini-story (setup, intrigue, mysterious climax/question) be told in under 60 seconds? Avoid topics that are too complex.
-3.  **"Rabbit Hole" Effect:** The story must leave the viewer with a chilling, unanswered question that makes them want to Google it or check the comments. This drives engagement.
-4.  **Visual Potential:** The topic should be easily visualizable with stock footage, archival photos, maps, or simple animations. Avoid purely abstract or philosophical topics.
-5.  **Uniqueness:** Prioritize lesser-known mysteries or fresh angles on well-known ones over topics that are overly saturated.
+2.  **Narrative Arc:** Can a compelling mini-story (setup, intrigue, mysterious climax/question) be told in under 60 seconds?
+3.  **"Rabbit Hole" Effect:** The story must leave the viewer with a chilling, unanswered question.
+4.  **Visual Potential:** The topic should be easily visualizable with stock footage.
+5.  **Uniqueness:** Prioritize lesser-known mysteries or fresh angles.
+
+✅ NEW: TITLE REQUIREMENTS (CRITICAL):
+- MUST use "Vanished" or "Disappeared" in the title
+- AVOID name-first patterns (e.g., "John Doe: The Mystery")
+- USE role/description first (e.g., "The Hiker Who Vanished")
+- Personal/emotional connection over abstract concepts
 
 GOOD MYTHICA REPORT TITLE EXAMPLES:
-- "The Ship That Vanished With a Crew of Ghosts"
-- "The Radio Signal From a Galaxy With No Stars"
-- "He Disappeared From Inside a Locked Room"
-- "The Town Where Everyone Forgot How to Sleep"
+- "The Ship Where the Crew Vanished" (NOT "The Mary Celeste Mystery")
+- "The Hiker Who Vanished From an Easy Trail" (NOT "David Paulides Case")
+- "The Woman Who Disappeared After a Car Crash" (NOT "Maura Murray: The Case")
+- "The Signal That Came From a Dead Star" (OK - phenomenon, not person)
 
 OUTPUT (JSON only):
 Provide a JSON object with a "selected_topics" key, containing a list of 5 objects.
@@ -563,9 +584,6 @@ def save_trending_data(trending_ideas: List[Dict[str, Any]]):
 
 
 if __name__ == "__main__":
-    # >>> ADD THIS LINE <<<
-    from generate_trending_and_script import load_history 
-
     # Get real trending mystery topics
     real_trends = get_real_mystery_trends()
 

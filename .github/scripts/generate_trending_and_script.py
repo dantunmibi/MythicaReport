@@ -262,6 +262,60 @@ def validate_script_data(data):
     if hook_words > 15:
         print(f"⚠️ Hook too long ({hook_words} words), keep under 12 words")
     
+    # ✅ NEW: Validate hook effectiveness (prevents complex/abstract hooks)
+    hook_text = data.get("hook", "")
+    
+    # Check for proven power words (your 94.8% retention videos use these)
+    power_words = ['vanished', 'disappeared', 'found', 'discovered', 'mystery', 'never', 'impossible']
+    has_power_word = any(word in hook_text.lower() for word in power_words)
+    
+    if not has_power_word:
+        print(f"⚠️ Hook lacks power words (vanished, disappeared, etc.)")
+        print(f"   💡 Your 94.8% retention videos all use these words")
+    
+    # Check for complex names/terms that need context
+    complex_indicators = ['event', 'incident', 'case', 'phenomenon']
+    unfamiliar_names = sum(1 for word in hook_text.split() if word and len(word) > 0 and word[0].isupper() and len(word) > 8)
+    
+    if unfamiliar_names > 1 or any(term in hook_text.lower() for term in complex_indicators):
+        print(f"⚠️ Hook may be too complex for vertical video")
+        print(f"   💡 Unfamiliar names: {unfamiliar_names}, Complex terms detected")
+        print(f"   💡 Consider: More immediate, emotional hook")
+    
+    # Validate hook length (should be readable in 3 seconds)
+    hook_words = len(hook_text.split())
+    if hook_words > 12:
+        print(f"⚠️ Hook too long: {hook_words} words (max 12 for 3-second read)")
+    
+    print(f"   Hook analysis: '{hook_text}'")
+    
+    # ✅ NEW: Validate title pattern (prevents name-first failures)
+    title_text = data.get("title", "")
+    
+    # Check for proven keywords
+    title_power_words = ['vanished', 'disappeared', 'mystery', 'never', 'impossible', 'found']
+    has_title_power_word = any(word in title_text.lower() for word in title_power_words)
+    
+    if not has_title_power_word:
+        print(f"⚠️ Title lacks proven keywords")
+        print(f"   💡 Your 94.8% retention video uses 'Vanished' in title")
+        print(f"   💡 Consider: Adding 'Vanished' or 'Disappeared'")
+    
+    # Prefer "The [Subject] Who Vanished" pattern over name-first
+    if title_text.startswith("The ") and "vanished" in title_text.lower():
+        print(f"   ✅ Title follows proven pattern: 'The [X] Who Vanished'")
+    elif ":" in title_text:
+        title_parts = title_text.split(":")
+        first_part = title_parts[0].strip()
+        # Check if first part is a proper name (capitalized words)
+        words_in_first = first_part.split()
+        if len(words_in_first) <= 3 and all(w[0].isupper() for w in words_in_first if w):
+            print(f"   ⚠️ Title uses name-based pattern (lower performance)")
+            print(f"   💡 Your data: Name-first titles = 20-35% retention")
+            print(f"   💡 Better: 'The [Role] Who Vanished' instead of '{first_part}:'")
+    
+    print(f"   Title analysis: '{title_text}'")
+
     print(f"✅ Script validation PASSED")
     return True
 

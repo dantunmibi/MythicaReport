@@ -10,7 +10,7 @@ def check_schedule():
     cross-midnight time slots.
     """
     schedule_file = 'config/posting_schedule.json'
-    TOLERANCE_MINUTES = 30
+    TOLERANCE_MINUTES = int(os.getenv("SCHEDULE_TOLERANCE_MINUTES", "120"))
 
     # Handle manual override
     if os.getenv('IGNORE_SCHEDULE') == 'true':
