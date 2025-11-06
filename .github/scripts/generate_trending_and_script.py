@@ -39,11 +39,11 @@ HARD_LIMIT_WORDS = 100                                                # Safety b
 
 # 🔥 CATEGORY WEIGHTS (Based on retention performance)
 MYSTERY_WEIGHTS = {
-    'disappearance': 0.50,    # 94.8% retention - PRIORITIZE
+    'disappearance': 0.40,    # 94.8% retention - PRIORITIZE
     'phenomena': 0.30,        # 89.5% retention - STRONG
     'crime': 0.15,            # 74.0% retention - GOOD
     'historical': 0.05,       # 34.8% retention - DEPRIORITIZE
-    'conspiracy': 0.0         # Untested - AVOID
+    'conspiracy': 0.10,         # moderate for now
 }
 
 # 🎯 TITLE POWER WORDS (Proven performers)
@@ -266,7 +266,7 @@ def validate_script_data(data):
     hook_text = data.get("hook", "")
     
     # Check for proven power words (your 94.8% retention videos use these)
-    power_words = ['vanished', 'disappeared', 'found', 'discovered', 'mystery', 'never', 'impossible']
+    power_words = ['vanished', 'disappeared', 'found', 'discovered', 'mystery', 'never', 'impossible', 'conspiracy']
     has_power_word = any(word in hook_text.lower() for word in power_words)
     
     if not has_power_word:
@@ -293,7 +293,7 @@ def validate_script_data(data):
     title_text = data.get("title", "")
     
     # Check for proven keywords
-    title_power_words = ['vanished', 'disappeared', 'mystery', 'never', 'impossible', 'found']
+    title_power_words = ['vanished', 'disappeared', 'mystery', 'never', 'impossible', 'found', 'conspiracy']
     has_title_power_word = any(word in title_text.lower() for word in title_power_words)
     
     if not has_title_power_word:
@@ -355,7 +355,7 @@ def select_weighted_mystery_type(content_type, user_mystery_type):
     # Auto-select based on content type and weights
     if content_type == 'evening_prime':
         # Evening: prefer disappearances (your best performer)
-        weighted_choice = 'disappearance' if hash(str(datetime.now())) % 100 < 60 else 'phenomena'
+        weighted_choice = 'disappearance' if hash(str(datetime.now())) % 100 < 60 else 'conspiracy'
     elif content_type == 'late_night':
         # Late night: prefer crime/disappearances
         weighted_choice = 'disappearance' if hash(str(datetime.now())) % 100 < 50 else 'crime'
@@ -364,6 +364,8 @@ def select_weighted_mystery_type(content_type, user_mystery_type):
         rand = hash(str(datetime.now())) % 100
         if rand < 40:
             weighted_choice = 'disappearance'
+        elif rand < 50:
+            weighted_choice = 'conspiracy'
         elif rand < 65:
             weighted_choice = 'phenomena'
         elif rand < 85:
@@ -375,6 +377,8 @@ def select_weighted_mystery_type(content_type, user_mystery_type):
         rand = hash(str(datetime.now())) % 100
         if rand < 50:
             weighted_choice = 'disappearance'
+        elif rand < 70:
+            weighted_choice = 'conspiracy'
         elif rand < 80:
             weighted_choice = 'phenomena'
         elif rand < 95:
@@ -448,6 +452,15 @@ TRUE CRIME MYSTERIES:
 - Key elements: Evidence that doesn't add up, missing pieces
 - Examples: Zodiac Killer, Black Dahlia, Somerton Man
 - ETHICAL: Focus on mystery aspect, respect victims
+- LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
+""",
+        'conspiracy': f"""
+CONSPIRACY THEORIES (93.7% RETENTION - HIGH PERFORMER):
+- Focus: Hidden agendas, secret operations, unexplained power structures
+- Hook formula: "[Event/Fact]. [Strange link or contradiction]. [Hidden truth they don't want you to know]."
+- Key elements: Timeline of the event, suspicious coincidences, conflicting reports, suppressed evidence
+- Examples: MK Ultra, Moon Landing, Illuminati, Area 51, Project Blue Beam, Mandela Effect
+- MANDATORY: Use "Conspiracy," "Cover-Up," or "They Knew" in the title (proven click-through boost)
 - LENGTH: {OPTIMAL_MIN_WORDS}-{OPTIMAL_MAX_WORDS} words ({OPTIMAL_MIN_DURATION}-{OPTIMAL_MAX_DURATION}s)
 """,
         'phenomena': f"""
