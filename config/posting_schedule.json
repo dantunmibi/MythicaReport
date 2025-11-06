@@ -48,7 +48,8 @@
         "phenomena_mystery": "21% (3 posts/week - 89.5% retention)",
         "unsolved_true_crime": "14% (2 posts/week - 74% retention)",
         "cosmic_and_sci_fi": "14% (2 posts/week - phenomena category)",
-        "historical_mysteries": "7% (1 post/week - 34.8% retention, minimal use)"
+        "historical_mysteries": "7% (1 post/week - 34.8% retention, minimal use)",
+        "conspiracy_mystery": "14% (2 posts/week - est. 78% retention)"
       },
       "removed_categories": [
         "paranormal_hauntings (merged into phenomena)",
@@ -66,7 +67,8 @@
       "phenomena_mystery": "phenomena",
       "unsolved_true_crime": "crime",
       "cosmic_and_sci_fi": "phenomena",
-      "historical_mysteries": "historical"
+      "historical_mysteries": "historical",
+      "conspiracy_mystery": "conspiracy"
     }
   }
 }
