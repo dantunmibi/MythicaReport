@@ -1,74 +1,79 @@
 {
   "schedule": {
     "timezone": "UTC",
-    "description": "OPTIMIZED posting schedule for Mythica Report - prioritizing disappearance mysteries (94.8% retention)",
+    "description": "DATA-DRIVEN posting schedule for Mythica Report - optimized for 94.8% retention patterns",
     "optimization_notes": {
-      "version": "3.0_data_driven",
-      "based_on": "Proven performance data: disappearances 94.8%, phenomena 89.5%, crime 74%, historical 34.8%",
+      "version": "3.1_retention_optimized",
+      "based_on": "Inverted pyramid script structure + 10 strategic posts/week",
       "changes": [
-        "Increased disappearance mysteries from 0 to 7 posts/week (50% of content)",
-        "Reduced historical mysteries from 3 to 1 post/week (poor 34.8% retention)",
-        "Maintained evening prime times (7-9 PM) and late night (10 PM-2 AM)",
-        "Added explicit disappearance category for best performers"
+        "Reduced from 16 to 10 posts/week (quality over quantity)",
+        "Prioritized disappearance mysteries (94.8% retention)",
+        "Removed low-performing historical slots (34.8% retention)",
+        "Focused on evening prime (7-9 PM UTC) and late night (10 PM-2 AM UTC)",
+        "Added analytics feedback loop for auto-optimization"
       ]
     },
     "weekly_schedule": {
       "Monday": [
-        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Evening prime - best time"},
-        {"time": "23:00", "priority": "medium", "type": "phenomena_mystery", "note": "Late night engagement"}
+        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Evening prime - proven best slot"}
       ],
       "Tuesday": [
-        {"time": "19:00", "priority": "high", "type": "disappearance_mystery", "note": "Evening prime slot"},
-        {"time": "22:00", "priority": "highest", "type": "cosmic_and_sci_fi", "note": "Late night curiosity"}
+        {"time": "22:00", "priority": "highest", "type": "phenomena_mystery", "note": "Late night engagement - cosmic/unexplained"}
       ],
       "Wednesday": [
-        {"time": "20:00", "priority": "highest", "type": "disappearance_mystery", "note": "Mid-week prime time"},
-        {"time": "23:00", "priority": "medium", "type": "unsolved_true_crime", "note": "Late night true crime"}
+        {"time": "20:00", "priority": "highest", "type": "disappearance_mystery", "note": "Mid-week prime - high retention content"}
       ],
       "Thursday": [
-        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Evening prime - proven time"},
-        {"time": "22:00", "priority": "high", "type": "phenomena_mystery", "note": "Late night phenomena"}
+        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Evening prime - consistency builds audience"},
+        {"time": "23:00", "priority": "high", "type": "conspiracy_mystery", "note": "Late night - conspiracy performs well here"}
       ],
       "Friday": [
-        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Friday evening engagement"},
-        {"time": "23:00", "priority": "highest", "type": "unsolved_true_crime", "note": "Weekend start - true crime"}
+        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Friday evening - weekend start, high engagement"},
+        {"time": "22:00", "priority": "highest", "type": "crime_mystery", "note": "Weekend kickoff - true crime spike"}
       ],
       "Saturday": [
-        {"time": "20:00", "priority": "high", "type": "disappearance_mystery", "note": "Weekend evening"},
-        {"time": "23:00", "priority": "medium", "type": "cosmic_and_sci_fi", "note": "Weekend late night"}
+        {"time": "20:00", "priority": "high", "type": "disappearance_mystery", "note": "Weekend evening - relaxed viewing"},
+        {"time": "23:00", "priority": "medium", "type": "phenomena_mystery", "note": "Late Saturday - experimental content"}
       ],
       "Sunday": [
-        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Sunday evening prime"},
-        {"time": "22:00", "priority": "low", "type": "historical_mysteries", "note": "Only 1 historical/week - lowest retention"}
+        {"time": "19:00", "priority": "highest", "type": "disappearance_mystery", "note": "Sunday evening prime - preparation for week"}
       ]
     },
     "content_distribution": {
       "target_percentages": {
-        "disappearance_mystery": "50% (7 posts/week - 94.8% retention)",
-        "phenomena_mystery": "21% (3 posts/week - 89.5% retention)",
-        "unsolved_true_crime": "14% (2 posts/week - 74% retention)",
-        "cosmic_and_sci_fi": "14% (2 posts/week - phenomena category)",
-        "historical_mysteries": "7% (1 post/week - 34.8% retention, minimal use)",
-        "conspiracy_mystery": "14% (2 posts/week - est. 78% retention)"
+        "disappearance_mystery": "60% (6 posts/week - 94.8% retention - MAXIMIZE)",
+        "phenomena_mystery": "20% (2 posts/week - 89.5% retention - STRONG)",
+        "crime_mystery": "10% (1 post/week - 74% retention - GOOD)",
+        "conspiracy_mystery": "10% (1 post/week - testing retention)",
+        "historical_mysteries": "0% (REMOVED - 34.8% retention too low)"
       },
-      "removed_categories": [
-        "paranormal_hauntings (merged into phenomena)",
-        "high_strangeness (merged into phenomena)",
-        "internet_and_modern (low priority, replaced with disappearances)"
-      ]
+      "posting_frequency": {
+        "total_per_week": 10,
+        "strategy": "Quality over quantity - focus on 70%+ retention minimum",
+        "reasoning": "16 posts/week with 99.7% new viewers = algorithm spam signal. 10 posts = sustainable growth."
+      }
     },
     "optimal_times_utc": {
-      "evening_prime": ["19:00", "20:00", "21:00"],
+      "evening_prime": ["19:00", "20:00"],
       "late_night": ["22:00", "23:00"],
-      "notes": "Based on user data: 7-9 PM and 10 PM-2 AM are best times"
+      "notes": "Reduced to 2 time windows per category for consistency"
     },
     "mystery_type_mapping": {
       "disappearance_mystery": "disappearance",
       "phenomena_mystery": "phenomena",
-      "unsolved_true_crime": "crime",
-      "cosmic_and_sci_fi": "phenomena",
-      "historical_mysteries": "historical",
+      "crime_mystery": "crime",
       "conspiracy_mystery": "conspiracy"
+    },
+    "analytics_integration": {
+      "enabled": true,
+      "auto_adjust": true,
+      "review_frequency": "weekly",
+      "min_data_points": 5,
+      "adjustment_criteria": {
+        "promote_slot": "avg_retention > 70% for 5+ videos",
+        "demote_slot": "avg_retention < 50% for 3+ videos",
+        "remove_category": "avg_retention < 40% for 10+ videos"
+      }
     }
   }
 }

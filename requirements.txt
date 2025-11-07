@@ -1,7 +1,7 @@
 google-auth-oauthlib>=1.1.0
 google-auth-httplib2>=0.1.1
 
-# 🌱 Garden Glow Up - Automated Gardening Shorts Pipeline
+
 # Python Dependencies
 # System utilities
 setuptools>=68.0.0,<81
