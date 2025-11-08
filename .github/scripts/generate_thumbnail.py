@@ -160,7 +160,7 @@ def generate_thumbnail_huggingface(prompt):
         ]
 
         for model in models:
-            url = f"https://api-inference.huggingface.co/models/{model}"
+            url = f"https://router.huggingface.co/hf-inference/models/{model}"
             print(f"🤗 Trying {model}")
 
             response = requests.post(url, headers=headers, json=payload, timeout=120)
@@ -392,6 +392,34 @@ def create_noir_gradient(bg_path, mystery_category):
     img.save(bg_path, quality=95)
     return bg_path
 
+def compress_thumbnail_under_limit(image, output_path, max_kb=2000):
+    """Compress thumbnail to under 2MB limit"""
+    # Apply softening filter
+    image = image.filter(ImageFilter.SMOOTH)
+    
+    # Try quality levels from 90 down to 80
+    for quality in [90, 85, 80]:
+        image.save(output_path, "PNG", quality=quality, optimize=True)
+        size_kb = os.path.getsize(output_path) / 1024
+        
+        if size_kb <= max_kb:
+            print(f"   ✅ Compressed to {size_kb:.1f} KB (quality={quality})")
+            return True
+    
+    # If still too large, convert to JPEG
+    print(f"   ⚠️ PNG still too large, converting to JPEG...")
+    rgb_image = image.convert("RGB")
+    jpeg_path = output_path.replace('.png', '.jpg')
+    rgb_image.save(jpeg_path, "JPEG", quality=85, optimize=True)
+    
+    # Rename back to .png (YouTube accepts either)
+    os.remove(output_path)
+    os.rename(jpeg_path, output_path)
+    
+    size_kb = os.path.getsize(output_path) / 1024
+    print(f"   ✅ JPEG: {size_kb:.1f} KB")
+    return True
+
 
 # Generate background
 print("🔍 Generating mystery thumbnail background...")
@@ -621,9 +649,11 @@ if final_img.size != (720, 1280):
 # 🔍 SUBTLE SHARPEN (not overly sharp - vintage feel)
 final_img = final_img.filter(ImageFilter.SHARPEN)
 
-final_img.save(thumb_path, quality=95, optimize=True)
+# Compress to under 2MB
+compress_thumbnail_under_limit(final_img, thumb_path, max_kb=2000)
 
 saved_img = Image.open(thumb_path)
+
 print(f"\n✅ MYSTERY THUMBNAIL COMPLETE")
 print(f"   Path: {thumb_path}")
 print(f"   Size: {os.path.getsize(thumb_path) / 1024:.1f} KB")

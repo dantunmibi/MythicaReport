@@ -342,7 +342,7 @@ def generate_image_huggingface(prompt, filename, width=1080, height=1920):
         ]
 
         for model in models:
-            url = f"https://api-inference.huggingface.co/models/{model}"
+            url = f"https://router.huggingface.co/hf-inference/models/{model}"
             print(f"🤗 Trying model: {model}")
 
             response = requests.post(url, headers=headers, json=payload, timeout=120)
@@ -954,7 +954,7 @@ def create_dynamic_music_layer(audio_duration, script_data):
         print(f"      Normalized to: {normalized_music.dBFS:.1f} dBFS")
         
         # 2. Reduce to whisper-quiet background (-45 dBFS = barely audible under voice)
-        final_reduction_dB = -15.0  # Additional 25dB reduction
+        final_reduction_dB = -20.0  # Additional 25dB reduction
         quiet_music = normalized_music - abs(final_reduction_dB)
         print(f"      Final background level: {quiet_music.dBFS:.1f} dBFS (whisper quiet)")
         

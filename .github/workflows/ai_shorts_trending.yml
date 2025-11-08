@@ -27,10 +27,10 @@ on:
     # Focus: Quality over quantity, retention-first strategy
     
     # Monday - 1 post
-    - cron: '0 19 * * 1'    # 19:00 UTC - disappearance_mystery (highest)
+    - cron: '0 23 * * 1'    # 19:00 UTC - disappearance_mystery (highest)
 
     # Tuesday - 1 post
-    - cron: '0 22 * * 2'    # 22:00 UTC - phenomena_mystery (highest)
+    - cron: '0 23 * * 2'    # 22:00 UTC - phenomena_mystery (highest)
 
     # Wednesday - 1 post
     - cron: '0 20 * * 3'    # 20:00 UTC - disappearance_mystery (highest)
@@ -48,7 +48,7 @@ on:
     - cron: '0 23 * * 6'    # 23:00 UTC - phenomena_mystery (medium)
 
     # Sunday - 1 post
-    - cron: '0 19 * * 0'    # 19:00 UTC - disappearance_mystery (highest)
+    - cron: '0 14 * * 0'    # 19:00 UTC - disappearance_mystery (highest)
 
 jobs:
   build_and_upload:
