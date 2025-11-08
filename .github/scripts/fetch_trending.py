@@ -158,71 +158,79 @@ def is_mystery_query(query: str) -> bool:
 
 
 def get_reddit_mystery_trends() -> List[str]:
-    """Get trending posts from mystery subreddits"""
+    """Get trending posts from mystery subreddits (optimized to avoid zero results)"""
     try:
         print("🔮 Fetching Reddit mystery trends...")
-        
+
+        # Expanded subreddit list
         subreddits = [
-            'UnsolvedMysteries',
-            'HighStrangeness',
-            'Glitch_in_the_Matrix',
-            'creepy',
-            'RBI',
-            'InternetIsBeautiful'
+            'UnsolvedMysteries', 'HighStrangeness', 'Glitch_in_the_Matrix',
+            'creepy', 'RBI', 'InternetIsBeautiful', 'StrangeUnexplained', 'TrueCrime'
         ]
-        
+
         trends = []
-        
-        for subreddit in subreddits:
-            try:
-                url = f'https://www.reddit.com/r/{subreddit}/hot.json?limit=25'
-                headers = {'User-Agent': 'Mozilla/5.0'}
-                
-                print(f"   👽 Fetching r/{subreddit}...")
-                response = requests.get(url, headers=headers, timeout=10)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    posts_found = 0
-                    
-                    for post in data['data']['children'][:20]:
-                        post_data = post['data']
-                        title = post_data.get('title', '')
-                        upvotes = post_data.get('ups', 0)
-                        
-                        good_phrases = [
-                            'what happened to', 'the strange case of', 'the mystery of',
-                            'unsolved disappearance', 'the only clue', 'chilling story',
-                            'a strange detail about', 'nobody can explain', 'what was the'
-                        ]
-                        bad_phrases = [
-                            'my theory', 'what do you think', 'discussion', 'help me find',
-                            'rant', 'meta', 'ama', 'unpopular opinion'
-                        ]
-                        
-                        title_lower = title.lower()
-                        has_good = any(phrase in title_lower for phrase in good_phrases)
-                        has_bad = any(phrase in title_lower for phrase in bad_phrases)
-                        is_viral = upvotes > 300
-                        
-                        if (has_good and not has_bad) or (is_viral and not has_bad):
-                            clean_title = clean_reddit_title(title)
-                            if clean_title and len(clean_title) > 20:
-                                trends.append(clean_title)
-                                posts_found += 1
-                                print(f"      ✓ ({upvotes} ↑) {clean_title[:70]}")
-                    
-                    print(f"      Found {posts_found} mystery story leads")
-                
-                time.sleep(random.uniform(2.0, 4.0))
-                
-            except Exception as e:
-                print(f"   ⚠️ Failed to fetch r/{subreddit}: {e}")
-                continue
-        
-        print(f"✅ Found {len(trends)} trends from Reddit")
+
+        # Randomize 4 subreddits per run
+        for subreddit in random.sample(subreddits, 4):
+            urls = [
+                f'https://www.reddit.com/r/{subreddit}/hot.json?limit=25',
+                f'https://www.reddit.com/r/{subreddit}/new.json?limit=25',
+                f'https://www.reddit.com/r/{subreddit}/rising.json?limit=25'
+            ]
+
+            posts_found = 0
+
+            for url in urls:
+                for attempt in range(3):
+                    try:
+                        headers = {'User-Agent': 'Mozilla/5.0'}
+                        response = requests.get(url, headers=headers, timeout=10)
+                        if response.status_code != 200:
+                            raise ValueError(f"Status code {response.status_code}")
+                        data = response.json()
+                        break
+                    except Exception as e:
+                        print(f"   ⚠️ Attempt {attempt + 1} failed for {url}: {e}")
+                        time.sleep(2 ** attempt)
+                else:
+                    continue  # skip to next URL if all attempts fail
+
+                for post in data.get('data', {}).get('children', [])[:20]:
+                    post_data = post.get('data', {})
+                    title = post_data.get('title', '')
+                    upvotes = post_data.get('ups', 0)
+
+                    # Loosen good phrases to capture more trends
+                    good_phrases = [
+                        'what happened to', 'the strange case of', 'the mystery of',
+                        'unsolved disappearance', 'the only clue', 'chilling story',
+                        'a strange detail about', 'nobody can explain', 'what was the',
+                        'disappearance', 'vanished', 'mystery'
+                    ]
+                    bad_phrases = [
+                        'my theory', 'what do you think', 'discussion', 'help me find',
+                        'rant', 'meta', 'ama', 'unpopular opinion'
+                    ]
+
+                    title_lower = title.lower()
+                    has_good = any(phrase in title_lower for phrase in good_phrases)
+                    has_bad = any(phrase in title_lower for phrase in bad_phrases)
+                    is_viral = upvotes >= 100  # lower threshold
+
+                    if (has_good or is_viral) and not has_bad:
+                        clean_title = clean_reddit_title(title)
+                        if clean_title and len(clean_title) >= 15:
+                            trends.append(clean_title)
+                            posts_found += 1
+                            print(f"      ✓ ({upvotes} ↑) {clean_title[:70]}")
+
+                time.sleep(random.uniform(1.5, 3.0))
+
+            print(f"   Found {posts_found} mystery story leads in r/{subreddit}")
+
+        print(f"✅ Found {len(trends)} total trends from Reddit")
         return trends[:20]
-        
+
     except Exception as e:
         print(f"⚠️ Reddit scraping failed: {e}")
         return []
