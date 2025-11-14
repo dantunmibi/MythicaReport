@@ -23,32 +23,34 @@ on:
         default: 'auto'
         
   schedule:
-    # 🎯 OPTIMIZED SCHEDULE: 10 strategic posts/week (down from 16)
-    # Focus: Quality over quantity, retention-first strategy
+    # 🎯 ANALYTICS-OPTIMIZED SCHEDULE: Based on real 28-day YouTube data
+    # Retention calculation: duration-based (48s target)
+    # Focus: Historical (51.6%) + Disappearances (50.1%)
+    # Avoided: 19:00 (27.1%), 10:00 (28.1%), Phenomena (30.6%), Crime (20.8%)
     
-    # Monday - 1 post
-    - cron: '0 23 * * 1'    # 19:00 UTC - disappearance_mystery (highest)
+    # MONDAY - 1 post (Disappearance)
+    - cron: '0 23 * * 1'    # 23:00 UTC - disappearance (56.1% time retention, highest confidence)
 
-    # Tuesday - 1 post
-    - cron: '0 23 * * 2'    # 22:00 UTC - phenomena_mystery (highest)
+    # TUESDAY - 1 post (Historical - TOP CATEGORY)
+    - cron: '0 2 * * 2'     # 02:00 UTC - historical (52.9% time retention, high confidence)
 
-    # Wednesday - 1 post
-    - cron: '0 20 * * 3'    # 20:00 UTC - disappearance_mystery (highest)
+    # WEDNESDAY - 1 post (Historical)
+    - cron: '0 22 * * 3'    # 22:00 UTC - historical (medium confidence, 7 videos tested)
 
-    # Thursday - 2 posts
-    - cron: '0 19 * * 4'    # 19:00 UTC - disappearance_mystery (highest)
-    - cron: '0 23 * * 4'    # 23:00 UTC - conspiracy_mystery (high)
+    # THURSDAY - 2 posts (Disappearance + Historical)
+    - cron: '0 23 * * 4'    # 23:00 UTC - disappearance (repeat best time)
+    - cron: '0 1 * * 5'     # 01:00 UTC (early Fri) - historical (67.7% retention, promising)
 
-    # Friday - 2 posts
-    - cron: '0 19 * * 5'    # 19:00 UTC - disappearance_mystery (highest)
-    - cron: '0 22 * * 5'    # 22:00 UTC - crime_mystery (highest)
+    # FRIDAY - 2 posts (Disappearance + Historical)
+    - cron: '0 21 * * 5'    # 21:00 UTC - disappearance (43.1% retention, acceptable)
+    - cron: '0 3 * * 6'     # 03:00 UTC (early Sat) - historical (64.6% retention, promising)
 
-    # Saturday - 2 posts
-    - cron: '0 20 * * 6'    # 20:00 UTC - disappearance_mystery (high)
-    - cron: '0 23 * * 6'    # 23:00 UTC - phenomena_mystery (medium)
+    # SATURDAY - 1 post (Historical)
+    - cron: '0 22 * * 6'    # 22:00 UTC - historical (testing weekend performance)
 
-    # Sunday - 1 post
-    - cron: '0 14 * * 0'    # 19:00 UTC - disappearance_mystery (highest)
+    # SUNDAY - 2 posts (Disappearance + Disappearance)
+    - cron: '0 2 * * 0'     # 02:00 UTC - disappearance (repeat proven time)
+    - cron: '0 14 * * 0'    # 14:00 UTC - disappearance (54.2% retention, needs more data)
 
 jobs:
   build_and_upload:
