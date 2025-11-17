@@ -23,34 +23,16 @@ on:
         default: 'auto'
         
   schedule:
-    # 🎯 ANALYTICS-OPTIMIZED SCHEDULE: Based on real 28-day YouTube data
-    # Retention calculation: duration-based (48s target)
-    # Focus: Historical (51.6%) + Disappearances (50.1%)
-    # Avoided: 19:00 (27.1%), 10:00 (28.1%), Phenomena (30.6%), Crime (20.8%)
-    
-    # MONDAY - 1 post (Disappearance)
-    - cron: '0 23 * * 1'    # 23:00 UTC - disappearance (56.1% time retention, highest confidence)
-
-    # TUESDAY - 1 post (Historical - TOP CATEGORY)
-    - cron: '0 2 * * 2'     # 02:00 UTC - historical (52.9% time retention, high confidence)
-
-    # WEDNESDAY - 1 post (Historical)
-    - cron: '0 22 * * 3'    # 22:00 UTC - historical (medium confidence, 7 videos tested)
-
-    # THURSDAY - 2 posts (Disappearance + Historical)
-    - cron: '0 23 * * 4'    # 23:00 UTC - disappearance (repeat best time)
-    - cron: '0 1 * * 5'     # 01:00 UTC (early Fri) - historical (67.7% retention, promising)
-
-    # FRIDAY - 2 posts (Disappearance + Historical)
-    - cron: '0 21 * * 5'    # 21:00 UTC - disappearance (43.1% retention, acceptable)
-    - cron: '0 3 * * 6'     # 03:00 UTC (early Sat) - historical (64.6% retention, promising)
-
-    # SATURDAY - 1 post (Historical)
-    - cron: '0 22 * * 6'    # 22:00 UTC - historical (testing weekend performance)
-
-    # SUNDAY - 2 posts (Disappearance + Disappearance)
-    - cron: '0 2 * * 0'     # 02:00 UTC - disappearance (repeat proven time)
-    - cron: '0 14 * * 0'    # 14:00 UTC - disappearance (54.2% retention, needs more data)
+    - cron: '0 23 * * 1'
+    - cron: '0 2 * * 2'
+    - cron: '0 22 * * 3'
+    - cron: '0 23 * * 4'
+    - cron: '0 1 * * 5'
+    - cron: '0 21 * * 5'
+    - cron: '0 3 * * 6'
+    - cron: '0 22 * * 6'
+    - cron: '0 2 * * 0'
+    - cron: '0 14 * * 0'
 
 jobs:
   build_and_upload:
@@ -60,6 +42,33 @@ jobs:
     steps:
       - name: 🔍 Checkout Mystery Archives
         uses: actions/checkout@v4
+
+      # ✅ NEW: Free up disk space
+      - name: 🧹 Free up runner disk space
+        run: |
+          echo "════════════════════════════════════════════════"
+          echo "🔍 RUNNER DISK SPACE - BEFORE CLEANUP"
+          echo "════════════════════════════════════════════════"
+          df -h / | grep -E "Filesystem|/dev/root"
+          echo ""
+          
+          echo "🗑️ Removing unused system packages..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          
+          echo "🐳 Cleaning Docker cache..."
+          docker image prune -f || true
+          
+          echo ""
+          echo "════════════════════════════════════════════════"
+          echo "✅ RUNNER DISK SPACE - AFTER CLEANUP"
+          echo "════════════════════════════════════════════════"
+          df -h / | grep -E "Filesystem|/dev/root"
+          echo ""
+          echo "💾 Freed: ~3.5GB"
+          echo "════════════════════════════════════════════════"
 
       - name: 🔐 Validate secrets
         env:
@@ -85,10 +94,11 @@ jobs:
             ${{ runner.os }}-pip-mystery-
             ${{ runner.os }}-pip-
 
+      # ✅ MODIFIED: Added --no-cache-dir
       - name: 📦 Install Python packages (for scheduler check)
         run: |
-          python -m pip install --upgrade pip
-          pip install pytz
+          python -m pip install --upgrade pip --no-cache-dir
+          pip install --no-cache-dir pytz
 
       - name: 🎯 Confirm Scheduled Run and Set Parameters
         id: schedule_check
@@ -124,6 +134,7 @@ jobs:
             ${{ runner.os }}-apt-mystery-
             ${{ runner.os }}-apt-
 
+      # ✅ MODIFIED: Added apt-get clean
       - name: 🔧 Install system deps
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
@@ -138,6 +149,11 @@ jobs:
             fonts-freefont-ttf \
             fonts-dejavu \
             espeak-ng
+          
+          # Clean APT cache
+          sudo apt-get clean
+          sudo rm -rf /var/lib/apt/lists/*
+          
           echo "🔍 System ready for mystery content generation"
 
       - name: 🎙️ Cache Coqui models
@@ -184,18 +200,35 @@ jobs:
             content-history-mystery-
             content-history-
 
+      # ✅ MODIFIED: Added --no-cache-dir
       - name: 📦 Install Python packages
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
-          python -m pip install --upgrade pip -q
-          pip install -r requirements.txt -q
+          python -m pip install --upgrade pip --no-cache-dir -q
+          pip install --no-cache-dir -r requirements.txt -q
           echo "🔍 Python dependencies installed"
 
+      # ✅ NEW: Music library caching
+      - name: 💾 Cache music library
+        if: steps.schedule_check.outputs.should_post == 'true'
+        uses: actions/cache@v4
+        with:
+          path: tmp/music
+          key: music-library-mystery-v1-${{ hashFiles('.github/scripts/download_music.py') }}
+          restore-keys: |
+            music-library-mystery-v1-
+
+      # ✅ MODIFIED: Check cache before downloading
       - name: 🎵 Download background music library
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
-          echo "🎵 Downloading copyright-free dark ambient music..."
-          python .github/scripts/download_music.py --download-all
+          if [ -d "tmp/music" ] && [ "$(ls -A tmp/music/*.mp3 2>/dev/null | wc -l)" -gt 10 ]; then
+            echo "✅ Music library cached: $(ls tmp/music/*.mp3 2>/dev/null | wc -l) tracks"
+            echo "📊 Total size: $(du -sh tmp/music 2>/dev/null | cut -f1)"
+          else
+            echo "🎵 Downloading copyright-free dark ambient music..."
+            python .github/scripts/download_music.py --download-all
+          fi
         continue-on-error: true
 
       - name: 🔍 Fetch trending mystery topics
