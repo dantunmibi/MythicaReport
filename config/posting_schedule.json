@@ -1,196 +1,204 @@
 {
   "schedule": {
     "timezone": "UTC",
-    "description": "ANALYTICS-DRIVEN posting schedule for Mythica Report - based on 28-day real YouTube data",
+    "description": "ANALYTICS-DRIVEN posting schedule for Mythica Report",
     "optimization_notes": {
-      "version": "3.2_analytics_optimized",
-      "data_source": "YouTube Analytics API (45 videos, 11,938 views)",
-      "date_generated": "2025-11-14",
-      "retention_calculation": "Duration-based (48s target)",
-      "based_on": "Real retention data: Historical (51.6%), Disappearances (50.1%)",
+      "version": "5.0_dynamic_cron",
+      "data_source": "YouTube Analytics API (45 videos)",
+      "date_generated": "2025-11-21",
+      "retention_calculation": "Viral Velocity (Retention * Log(Views))",
+      "based_on": "Top categories: disappearances & historical",
       "changes": [
-        "Historical NOW TOP CATEGORY (was incorrectly labeled worst at 34.8%)",
-        "Removed phenomena (30.6% actual vs 89.5% estimated - massive overestimate)",
-        "Removed crime (20.8% actual vs 74% estimated)",
-        "Eliminated 19:00 UTC slot (27.1% retention - worst time)",
-        "Focused on 21:00-03:00 UTC window (proven 52-68% retention)",
-        "50/50 split: Historical + Disappearances (both ~51% retention)"
+        "Switched to Dynamic Cron Optimization",
+        "Targeting absolute best 3 hours of the day",
+        "Increased weekend frequency"
       ]
     },
     "weekly_schedule": {
       "Monday": [
         {
-          "time": "23:00",
-          "priority": "highest",
+          "time": "01:00",
+          "priority": "high",
           "type": "disappearance_mystery",
-          "note": "Best time slot - 56.1% avg retention (12 videos tested)",
-          "expected_retention": "50.1%",
-          "confidence": "high"
+          "note": "Viral potential",
+          "expected_retention": "68.1%",
+          "confidence": "low"
         }
       ],
       "Tuesday": [
         {
-          "time": "02:00",
-          "priority": "highest",
+          "time": "03:00",
+          "priority": "high",
           "type": "historical_mystery",
-          "note": "Late night high performer - 52.9% retention (5 videos)",
-          "expected_retention": "51.6%",
-          "confidence": "high"
+          "note": "Viral potential",
+          "expected_retention": "59.3%",
+          "confidence": "low"
         }
       ],
       "Wednesday": [
         {
-          "time": "22:00",
-          "priority": "high",
-          "type": "historical_mystery",
-          "note": "Evening slot - 35.7% retention but 7 videos tested",
-          "expected_retention": "51.6%",
-          "confidence": "medium"
+          "time": "02:00",
+          "priority": "medium",
+          "type": "disappearance_mystery",
+          "note": "Optimized slot",
+          "expected_retention": "89.9%",
+          "confidence": "high"
         }
       ],
       "Thursday": [
         {
-          "time": "23:00",
-          "priority": "highest",
+          "time": "01:00",
+          "priority": "high",
+          "type": "historical_mystery",
+          "note": "Viral potential",
+          "expected_retention": "68.1%",
+          "confidence": "low"
+        }
+      ],
+      "Friday": [
+        {
+          "time": "03:00",
+          "priority": "high",
           "type": "disappearance_mystery",
-          "note": "Repeat best time - consistency builds audience",
-          "expected_retention": "50.1%",
+          "note": "Viral potential",
+          "expected_retention": "59.3%",
+          "confidence": "low"
+        },
+        {
+          "time": "02:00",
+          "priority": "medium",
+          "type": "historical_mystery",
+          "note": "Optimized slot",
+          "expected_retention": "89.9%",
+          "confidence": "high"
+        }
+      ],
+      "Saturday": [
+        {
+          "time": "01:00",
+          "priority": "high",
+          "type": "disappearance_mystery",
+          "note": "Viral potential",
+          "expected_retention": "68.1%",
+          "confidence": "low"
+        },
+        {
+          "time": "03:00",
+          "priority": "high",
+          "type": "historical_mystery",
+          "note": "Viral potential",
+          "expected_retention": "59.3%",
+          "confidence": "low"
+        }
+      ],
+      "Sunday": [
+        {
+          "time": "02:00",
+          "priority": "medium",
+          "type": "disappearance_mystery",
+          "note": "Optimized slot",
+          "expected_retention": "89.9%",
           "confidence": "high"
         },
         {
           "time": "01:00",
           "priority": "high",
           "type": "historical_mystery",
-          "note": "Early Friday morning - 67.7% retention (2 videos, promising)",
-          "expected_retention": "51.6%",
-          "confidence": "medium"
-        }
-      ],
-      "Friday": [
-        {
-          "time": "21:00",
-          "priority": "high",
-          "type": "disappearance_mystery",
-          "note": "Evening prime - 43.1% retention (3 videos)",
-          "expected_retention": "50.1%",
-          "confidence": "medium"
-        },
-        {
-          "time": "03:00",
-          "priority": "high",
-          "type": "historical_mystery",
-          "note": "Late night/early Saturday - 64.6% retention (2 videos)",
-          "expected_retention": "51.6%",
-          "confidence": "medium"
-        }
-      ],
-      "Saturday": [
-        {
-          "time": "22:00",
-          "priority": "high",
-          "type": "historical_mystery",
-          "note": "Weekend evening - testing historical performance",
-          "expected_retention": "51.6%",
-          "confidence": "medium"
-        }
-      ],
-      "Sunday": [
-        {
-          "time": "02:00",
-          "priority": "highest",
-          "type": "disappearance_mystery",
-          "note": "Repeat proven time slot",
-          "expected_retention": "50.1%",
-          "confidence": "high"
-        },
-        {
-          "time": "14:00",
-          "priority": "medium",
-          "type": "disappearance_mystery",
-          "note": "Afternoon slot - 54.2% retention (2 videos, needs more data)",
-          "expected_retention": "50.1%",
+          "note": "Viral potential",
+          "expected_retention": "68.1%",
           "confidence": "low"
         }
       ]
     },
     "content_distribution": {
       "target_percentages": {
-        "disappearance_mystery": "50% (5 posts/week - 50.1% ACTUAL retention)",
-        "historical_mystery": "50% (5 posts/week - 51.6% ACTUAL retention - TOP PERFORMER)",
-        "phenomena_mystery": "0% (REMOVED - 30.6% actual vs 89.5% estimated)",
-        "crime_mystery": "0% (REMOVED - 20.8% actual vs 74% estimated)",
-        "conspiracy_mystery": "0% (insufficient data)"
+        "disappearance_mystery": "50%",
+        "historical_mystery": "50%",
+        "conspiracy_mystery": "0%",
+        "phenomena_mystery": "0%",
+        "crime_mystery": "0%"
       },
       "actual_performance": {
-        "historical_mystery": "51.6% retention, 24.8s avg duration, 194 avg views (4 videos)",
-        "disappearance_mystery": "50.1% retention, 26.4s avg duration, 313 avg views (32 videos)",
-        "phenomena_mystery": "30.6% retention - UNDERPERFORMING",
-        "crime_mystery": "20.8% retention - DEAD CATEGORY"
+        "disappearance_mystery": "56.2% ret, 325 views",
+        "historical_mystery": "58.9% ret, 194 views",
+        "conspiracy_mystery": "30.9% ret, 115 views",
+        "phenomena_mystery": "28.0% ret, 253 views",
+        "crime_mystery": "20.6% ret, 160 views"
       },
       "posting_frequency": {
         "total_per_week": 10,
-        "strategy": "Equal split between top 2 performers - historical and disappearances",
-        "reasoning": "Both categories ~51% retention. Historical has higher ceiling, disappearances has more data."
+        "strategy": "Weekend Heavy (Fri-Sun 2x)",
+        "reasoning": "Maximizing viral windows found in analytics"
       }
     },
     "optimal_times_utc": {
-      "tier_1_proven": {
-        "23:00": "56.1% retention (12 videos) - BEST TIME",
-        "02:00": "52.9% retention (5 videos) - HIGHLY RELIABLE"
-      },
+      "tier_1_proven": {},
       "tier_2_promising": {
-        "01:00": "67.7% retention (2 videos) - needs more data",
-        "03:00": "64.6% retention (2 videos) - needs more data",
-        "21:00": "43.1% retention (3 videos) - acceptable",
-        "22:00": "35.7% retention (7 videos) - lower but reliable"
+        "01:00": "68.1% retention (2 videos)",
+        "03:00": "59.3% retention (2 videos)",
+        "02:00": "89.9% retention (5 videos)",
+        "14:00": "61.9% retention (2 videos)",
+        "20:00": "51.7% retention (2 videos)",
+        "23:00": "56.1% retention (13 videos)"
       },
       "tier_3_testing": {
-        "14:00": "54.2% retention (2 videos) - low confidence"
+        "21:00": "44.7% retention (3 videos)",
+        "00:00": "39.0% retention (1 videos)",
+        "13:00": "55.0% retention (1 videos)",
+        "22:00": "38.3% retention (7 videos)",
+        "19:00": "33.5% retention (4 videos)",
+        "10:00": "31.7% retention (2 videos)"
       },
       "avoid": {
-        "19:00": "27.1% retention - WORST TIME",
-        "10:00": "28.1% retention - VERY BAD",
-        "18:00": "12.5% retention - CATASTROPHIC"
+        "04:00": "Low performance",
+        "05:00": "Low performance",
+        "06:00": "Low performance",
+        "07:00": "Low performance",
+        "08:00": "Low performance",
+        "09:00": "Low performance",
+        "11:00": "Low performance",
+        "12:00": "Low performance",
+        "15:00": "Low performance",
+        "16:00": "Low performance",
+        "17:00": "Low performance",
+        "18:00": "Low performance"
       }
     },
     "mystery_type_mapping": {
-      "disappearance_mystery": "disappearances",
-      "historical_mystery": "historical",
-      "phenomena_mystery": "phenomena",
-      "crime_mystery": "true_crime",
-      "conspiracy_mystery": "unknown"
+      "disappearances": "disappearance_mystery",
+      "historical": "historical_mystery",
+      "phenomena": "phenomena_mystery",
+      "true_crime": "crime_mystery",
+      "unknown": "conspiracy_mystery"
     },
     "analytics_integration": {
       "enabled": true,
-      "last_updated": "2025-11-14",
+      "last_updated": "2025-11-21",
       "data_source": "YouTube Analytics API",
-      "sample_size": "45 videos over 28 days",
-      "next_refresh": "2025-11-21",
+      "sample_size": "45 videos",
+      "next_refresh": "2025-11-28",
       "adjustment_criteria": {
-        "promote_category": "avg_retention > 55% for 5+ videos",
-        "demote_category": "avg_retention < 45% for 5+ videos",
-        "remove_category": "avg_retention < 35% for 10+ videos",
-        "promote_time_slot": "avg_retention > 60% for 3+ videos",
-        "avoid_time_slot": "avg_retention < 30% for 3+ videos"
+        "promote_category": "Viral Score > 150",
+        "demote_category": "Viral Score < 50",
+        "promote_time_slot": "Top 3 ranked hours",
+        "avoid_time_slot": "Bottom 5 ranked hours"
       },
       "current_baseline": {
-        "overall_retention": "47.4%",
-        "target_improvement": "52%+ within 7 days",
-        "watch_time_avg": "24.6s / 48s"
+        "overall_retention": "52.6%",
+        "target_improvement": "Increase Viral Score > 200"
       }
     },
     "subscriber_growth_strategy": {
-      "current_problem": "99.7% new viewers, 0.3% subscribers",
+      "current_problem": "High unique viewer count, needs higher sub conversion",
       "traffic_sources": {
-        "shorts_feed": "93.9%",
-        "search": "2.6%",
-        "subscribers": "0.3%"
+        "shorts_feed": "Dominant",
+        "search": "Secondary",
+        "subscribers": "Target Growth Area"
       },
       "action_items": [
-        "Implement series framework (Mystery Mondays, Vanishing Fridays)",
-        "Add end-card hooks for next video",
-        "Create themed playlists for binge-watching",
-        "Test multi-part stories to encourage subscriptions"
+        "Implement series framework (Mystery Mondays)",
+        "Add visual hooks (arrows/circles) for retention",
+        "Looping scripts for higher AVD"
       ]
     }
   }

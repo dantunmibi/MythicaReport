@@ -23,16 +23,16 @@ on:
         default: 'auto'
         
   schedule:
-    - cron: '0 23 * * 1'
-    - cron: '0 2 * * 2'
-    - cron: '0 22 * * 3'
-    - cron: '0 23 * * 4'
-    - cron: '0 1 * * 5'
-    - cron: '0 21 * * 5'
+    - cron: '0 1 * * 1'
+    - cron: '0 3 * * 2'
+    - cron: '0 2 * * 3'
+    - cron: '0 1 * * 4'
+    - cron: '0 3 * * 5'
+    - cron: '0 2 * * 5'
+    - cron: '0 1 * * 6'
     - cron: '0 3 * * 6'
-    - cron: '0 22 * * 6'
     - cron: '0 2 * * 0'
-    - cron: '0 14 * * 0'
+    - cron: '0 1 * * 0'
 
 jobs:
   build_and_upload:
