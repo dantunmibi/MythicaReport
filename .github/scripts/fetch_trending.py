@@ -402,20 +402,186 @@ def similar_strings(s1: str, s2: str) -> float:
     union = len(words1 | words2)
     return intersection / union if union > 0 else 0.0
 
+def extract_entities_from_title(title: str) -> set:
+    """
+    Extract key entities (names, events, codes, numbers) from video titles
+    
+    Handles patterns like:
+    - Person names: "Asha Degree", "Jimmy Hoffa", "Leah Roberts"
+    - Events: "Flight 19", "MH370", "Dyatlov Pass"
+    - Places: "Roanoke", "Bermuda Triangle"
+    - Codes: "Cicada 3301", "Wow Signal"
+    
+    Returns normalized entity set for duplicate detection.
+    """
+    import re
+    
+    # Remove common title prefixes/suffixes
+    clean_title = title.lower()
+    clean_title = re.sub(r'^(the|a|an)\s+', '', clean_title)
+    clean_title = re.sub(r'\s+(who|that|which)\s+vanished.*$', '', clean_title)
+    clean_title = re.sub(r'\s+(who|that|which)\s+disappeared.*$', '', clean_title)
+    clean_title = re.sub(r':.*$', '', clean_title)  # Remove subtitle after colon
+    
+    entities = set()
+    
+    # Pattern 1: Proper names (capitalized words in sequence)
+    # "Asha Degree", "Jimmy Hoffa", "Natasha Ryan"
+    name_pattern = r'\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)\b'
+    for match in re.finditer(name_pattern, title):
+        entity = match.group(1).lower()
+        # Filter out common non-names
+        if entity not in ['the girl', 'the child', 'the teenager', 'the woman', 
+                          'the man', 'the union boss', 'the hijacker', 'the tourist']:
+            entities.add(entity)
+    
+    # Pattern 2: Flight/case numbers
+    # "Flight 19", "MH370", "MH 370"
+    flight_pattern = r'\b(flight\s*\d+|mh\s*\d+|ua\s*\d+)\b'
+    for match in re.finditer(flight_pattern, clean_title):
+        entity = match.group(1).replace(' ', '')  # Normalize "MH 370" → "mh370"
+        entities.add(entity)
+    
+    # Pattern 3: Codes and signals
+    # "Cicada 3301", "Wow Signal"
+    code_pattern = r'\b(cicada\s*\d+|wow\s+signal|lake\s+city\s+quiet\s+pills)\b'
+    for match in re.finditer(code_pattern, clean_title):
+        entity = match.group(1).replace(' ', '')  # "wow signal" → "wowsignal"
+        entities.add(entity)
+    
+    # Pattern 4: Famous places/events
+    # "Roanoke", "Bermuda Triangle", "Dyatlov Pass"
+    places = {
+        'roanoke': 'roanoke',
+        'bermuda triangle': 'bermudatriangle',
+        'dyatlov pass': 'dyatlovpass',
+        'tunguska': 'tunguska',
+        'skinwalker ranch': 'skinwalkerranch',
+        'mary celeste': 'maryceleste',
+        'alcatraz': 'alcatraz',
+        'flannan isles': 'flannанisles',
+        'jonbenet': 'jonbenet',
+        'zodiac': 'zodiac',
+        'db cooper': 'dbcooper',
+        'd.b. cooper': 'dbcooper',
+        'elisa lam': 'elisalam',
+        'maura murray': 'mauramurray',
+        'asha degree': 'ashadegree'
+    }
+    
+    for place_name, normalized in places.items():
+        if place_name in clean_title:
+            entities.add(normalized)
+    
+    # Pattern 5: Generic descriptor with specific name
+    # "The Colony That Vanished: Roanoke" → extract "roanoke"
+    # "The Hijacker Who Vanished: DB Cooper" → extract "db cooper"
+    if ':' in title:
+        subtitle = title.split(':', 1)[1].strip().lower()
+        # Re-run name extraction on subtitle
+        for match in re.finditer(name_pattern, title.split(':', 1)[1]):
+            entity = match.group(1).lower()
+            entities.add(entity)
+    
+    # If no entities found, use first 3 significant words as fallback
+    if not entities:
+        words = [w for w in clean_title.split() if len(w) > 4 and w not in {
+            'vanished', 'disappeared', 'mystery', 'conspiracy', 'haunting',
+            'ghost', 'signal', 'planes', 'ships', 'people', 'crew'
+        }]
+        if words:
+            entities.add('_'.join(words[:2]))  # Use first 2 significant words
+    
+    return entities
+
+
+def load_entity_history(history: dict, days: int = 90) -> set:
+    """
+    Load all entities from recent history
+    
+    Args:
+        history: Content history dict from load_history()
+        days: How far back to check (default 90 days)
+    
+    Returns:
+        Set of normalized entity strings
+    """
+    from datetime import datetime, timedelta
+    
+    entity_set = set()
+    cutoff_date = datetime.now() - timedelta(days=days)
+    
+    for topic_entry in history.get('topics', []):
+        # Check if topic is recent enough
+        topic_date_str = topic_entry.get('date')
+        if topic_date_str:
+            try:
+                topic_date = datetime.fromisoformat(topic_date_str)
+                if topic_date < cutoff_date:
+                    continue  # Skip old topics
+            except:
+                pass  # If date parsing fails, include it to be safe
+        
+        # Extract entities from historical title
+        title = topic_entry.get('title', '')
+        if title:
+            entities = extract_entities_from_title(title)
+            entity_set.update(entities)
+    
+    print(f"📂 Loaded {len(entity_set)} unique entities from last {days} days")
+    if entity_set:
+        print(f"   Sample entities: {list(entity_set)[:10]}")
+    
+    return entity_set
+
+
+def has_duplicate_entity(new_title: str, entity_history: set) -> tuple:
+    """
+    Check if new topic contains entities that already exist in history
+    
+    Args:
+        new_title: Title to check
+        entity_history: Set of historical entities
+    
+    Returns:
+        (is_duplicate: bool, matching_entities: list)
+    """
+    new_entities = extract_entities_from_title(new_title)
+    
+    if not new_entities:
+        # If no entities extracted, allow it (rare edge case)
+        return False, []
+    
+    # Check each new entity against history
+    matches = []
+    for entity in new_entities:
+        if entity in entity_history:
+            matches.append(entity)
+    
+    if matches:
+        return True, matches
+    
+    return False, []
+
 
 def filter_and_rank_mystery_trends(trends: List[str], history: Dict[str, Any]) -> List[Dict[str, Any]]:
     """
-    🚨 ENHANCED: Use Gemini to filter trends with TITLE PATTERN VALIDATION
-    Prevents name-first patterns that cause retention collapse
+    🚨 ENHANCED v3.2: Entity-based duplicate detection
+    - Prevents posting same person/event/case multiple times
+    - Checks last 90 days of history
+    - Blocks at topic selection stage (before script generation)
     """
     
     if not trends:
         print("⚠️ No trends to filter, using fallback...")
         return get_fallback_mystery_ideas()
     
-    print(f"\n🤖 Using Gemini to rank {len(trends)} mystery topics (RETENTION-OPTIMIZED)...")
+    print(f"\n🤖 Using Gemini to rank {len(trends)} mystery topics (ENTITY-AWARE v3.2)...")
 
-    previous_titles = [item.get('title', '') for item in history.get('topics', [])[-20:]]
+    # Load entity history (last 90 days)
+    entity_history = load_entity_history(history, days=90)
+    
+    previous_titles = [item.get('title', '') for item in history.get('topics', [])[-30:]]
 
     prompt = f"""You are a viral content strategist for "Mythica Report," a YouTube Shorts channel.
 
@@ -495,6 +661,15 @@ OUTPUT (JSON):
                         print(f"   ⚠️ Skipping '{title}' - name-first pattern (low retention)")
                         continue
                 
+                # 🚨 NEW: Entity-based duplicate detection
+                is_duplicate, matching_entities = has_duplicate_entity(title, entity_history)
+                
+                if is_duplicate:
+                    print(f"   🚫 DUPLICATE BLOCKED: '{title}'")
+                    print(f"      Entity match: {', '.join(matching_entities)}")
+                    print(f"      This topic was already covered in last 90 days")
+                    continue  # Skip this topic entirely
+                
                 trending_ideas.append({
                     "topic_title": title,
                     "summary": item.get('reason', 'High viral potential'),
@@ -506,11 +681,14 @@ OUTPUT (JSON):
                 })
             
             if not trending_ideas:
-                raise ValueError("All topics rejected by title validation")
+                print("⚠️ All topics were duplicates or rejected - retrying...")
+                raise ValueError("All topics rejected by duplicate/pattern validation")
 
-            print(f"✅ Gemini ranked {len(trending_ideas)} retention-optimized topics")
+            print(f"✅ Gemini ranked {len(trending_ideas)} UNIQUE topics (entity-verified)")
             for i, idea in enumerate(trending_ideas, 1):
-                print(f"   {i}. [{idea['viral_score']}] {idea['topic_title'][:60]}")
+                entities = extract_entities_from_title(idea['topic_title'])
+                entity_str = f" [{', '.join(list(entities)[:2])}]" if entities else ""
+                print(f"   {i}. [{idea['viral_score']}] {idea['topic_title'][:60]}{entity_str}")
             
             return trending_ideas
             

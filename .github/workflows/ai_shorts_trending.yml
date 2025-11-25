@@ -1,4 +1,4 @@
-name: 🔍 Mythica Report - Retention-Optimized Mystery Shorts
+name: 🔍 Mythica Report - Dark Mystery Shorts (v6.0)
 
 on:
   workflow_dispatch:
@@ -18,21 +18,34 @@ on:
         type: boolean
         default: false
       mystery_type:
-        description: 'Mystery category (disappearance, crime, phenomena, conspiracy, auto)'
+        description: 'Mystery category (dark_history, disturbing_medical, dark_experiments, disappearance, crime, phenomena, auto)'
         required: false
         default: 'auto'
         
   schedule:
-    - cron: '0 1 * * 1'
-    - cron: '0 3 * * 2'
-    - cron: '0 2 * * 3'
-    - cron: '0 1 * * 4'
-    - cron: '0 3 * * 5'
-    - cron: '0 2 * * 5'
-    - cron: '0 1 * * 6'
-    - cron: '0 3 * * 6'
-    - cron: '0 2 * * 0'
-    - cron: '0 1 * * 0'
+    # 🆕 7-DAY PREDICTABLE SCHEDULE (v6.0 - Dark Content Expansion)
+    # Aligned with posting_schedule.json v6.0
+    
+    # MONDAY 8 PM UTC - Dark History
+    - cron: '0 20 * * 1'
+    
+    # TUESDAY 8 PM UTC - Disappearances (proven strength)
+    - cron: '0 20 * * 2'
+    
+    # WEDNESDAY 8 PM UTC - Disturbing Medical Mysteries
+    - cron: '0 20 * * 3'
+    
+    # THURSDAY 8 PM UTC - Dark Experiments
+    - cron: '0 20 * * 4'
+    
+    # FRIDAY 9 PM UTC - Disappearances (weekend prime)
+    - cron: '0 21 * * 5'
+    
+    # SATURDAY 8 PM UTC - True Crime
+    - cron: '0 20 * * 6'
+    
+    # SUNDAY 8 PM UTC - Paranormal Phenomena
+    - cron: '0 20 * * 0'
 
 jobs:
   build_and_upload:
@@ -43,7 +56,6 @@ jobs:
       - name: 🔍 Checkout Mystery Archives
         uses: actions/checkout@v4
 
-      # ✅ NEW: Free up disk space
       - name: 🧹 Free up runner disk space
         run: |
           echo "════════════════════════════════════════════════"
@@ -94,7 +106,6 @@ jobs:
             ${{ runner.os }}-pip-mystery-
             ${{ runner.os }}-pip-
 
-      # ✅ MODIFIED: Added --no-cache-dir
       - name: 📦 Install Python packages (for scheduler check)
         run: |
           python -m pip install --upgrade pip --no-cache-dir
@@ -106,20 +117,37 @@ jobs:
           IGNORE_SCHEDULE: ${{ github.event.inputs.ignore_schedule }}
         run: python .github/scripts/optimal_scheduler.py
 
-      - name: 📅 Display mystery scheduling decision
+      - name: 📅 Display mystery scheduling decision (v6.0)
         run: |
+          echo "════════════════════════════════════════════════"
+          echo "📅 MYTHICA REPORT v6.0 - SCHEDULE STATUS"
+          echo "════════════════════════════════════════════════"
           echo "⏰ Current Time (UTC): ${{ steps.schedule_check.outputs.current_time }}"
           echo "🎯 Should Post: ${{ steps.schedule_check.outputs.should_post }}"
           echo "⭐ Priority: ${{ steps.schedule_check.outputs.priority }}"
           echo "🔍 Content Type: ${{ steps.schedule_check.outputs.content_type }}"
           echo ""
-          echo "💡 OPTIMIZED: 10 posts/week, retention-first strategy"
+          echo "🆕 v6.0 FEATURES:"
+          echo "   • 7 posts/week (one per day, predictable schedule)"
+          echo "   • Dark History (Mon), Medical (Wed), Experiments (Thu)"
+          echo "   • End hooks: Mystery deepening + category promise"
+          echo "   • Target: 64.1% retention + subscriber conversion"
+          echo "════════════════════════════════════════════════"
 
       - name: ⏸️ Skip if not a valid run
         if: steps.schedule_check.outputs.should_post != 'true'
         run: |
           echo "⏸️ Skipping run - not a scheduled time or a forced manual run."
           echo "ℹ️ To run immediately, use the 'Run workflow' button with 'ignore_schedule' set to true."
+          echo ""
+          echo "📅 NEXT SCHEDULED RUNS (UTC):"
+          echo "   Monday    20:00 - Dark History"
+          echo "   Tuesday   20:00 - Disappearances"
+          echo "   Wednesday 20:00 - Disturbing Medical"
+          echo "   Thursday  20:00 - Dark Experiments"
+          echo "   Friday    21:00 - Disappearances"
+          echo "   Saturday  20:00 - True Crime"
+          echo "   Sunday    20:00 - Paranormal"
           exit 0
       
       - name: 📦 Cache apt packages
@@ -134,7 +162,6 @@ jobs:
             ${{ runner.os }}-apt-mystery-
             ${{ runner.os }}-apt-
 
-      # ✅ MODIFIED: Added apt-get clean
       - name: 🔧 Install system deps
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
@@ -150,11 +177,10 @@ jobs:
             fonts-dejavu \
             espeak-ng
           
-          # Clean APT cache
           sudo apt-get clean
           sudo rm -rf /var/lib/apt/lists/*
           
-          echo "🔍 System ready for mystery content generation"
+          echo "🔍 System ready for dark mystery content generation"
 
       - name: 🎙️ Cache Coqui models
         if: steps.schedule_check.outputs.should_post == 'true'
@@ -168,7 +194,7 @@ jobs:
         run: |
           mkdir -p tmp
           chmod -R 777 tmp
-          echo "🔍 Workspace ready for mystery archives"
+          echo "🔍 Workspace ready for dark mystery archives"
 
       - name: 📋 Restore platform config
         if: steps.schedule_check.outputs.should_post == 'true'
@@ -200,15 +226,13 @@ jobs:
             content-history-mystery-
             content-history-
 
-      # ✅ MODIFIED: Added --no-cache-dir
       - name: 📦 Install Python packages
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
           python -m pip install --upgrade pip --no-cache-dir -q
           pip install --no-cache-dir -r requirements.txt -q
-          echo "🔍 Python dependencies installed"
+          echo "🔍 Python dependencies installed (v6.0 - dark content support)"
 
-      # ✅ NEW: Music library caching
       - name: 💾 Cache music library
         if: steps.schedule_check.outputs.should_post == 'true'
         uses: actions/cache@v4
@@ -218,7 +242,6 @@ jobs:
           restore-keys: |
             music-library-mystery-v1-
 
-      # ✅ MODIFIED: Check cache before downloading
       - name: 🎵 Download background music library
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
@@ -226,12 +249,12 @@ jobs:
             echo "✅ Music library cached: $(ls tmp/music/*.mp3 2>/dev/null | wc -l) tracks"
             echo "📊 Total size: $(du -sh tmp/music 2>/dev/null | cut -f1)"
           else
-            echo "🎵 Downloading copyright-free dark ambient music..."
+            echo "🎵 Downloading dark ambient music library..."
             python .github/scripts/download_music.py --download-all
           fi
         continue-on-error: true
 
-      - name: 🔍 Fetch trending mystery topics
+      - name: 🔍 Fetch trending mystery topics (v6.0 - Entity-aware)
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -239,18 +262,37 @@ jobs:
           MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
         run: |
           echo "🔍 Fetching trending mystery topics..."
+          echo "🆕 v6.0: Entity-based duplicate detection active"
+          echo "🚫 Blocking: Asha Degree, Natasha Ryan, Flight 19 duplicates"
           python .github/scripts/fetch_trending.py
 
-      - name: ✍️ Generate mystery script (RETENTION-OPTIMIZED)
+      - name: ✍️ Generate mystery script (v6.0 - DARK CONTENT + END HOOKS)
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
           PRIORITY: ${{ steps.schedule_check.outputs.priority }}
-          MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
+          MYSTERY_TYPE: ${{ steps.schedule_check.outputs.mystery_type || github.event.inputs.mystery_type }}
         run: |
-          echo "✍️ Generating retention-optimized script..."
-          echo "🎯 Target: Prevent 0:09 retention collapse"
+          echo "════════════════════════════════════════════════"
+          echo "✍️ GENERATING SCRIPT v6.0"
+          echo "════════════════════════════════════════════════"
+          echo "🆕 NEW CATEGORIES:"
+          echo "   • Dark History (mysterious historical events)"
+          echo "   • Disturbing Medical (baffling conditions)"
+          echo "   • Dark Experiments (secret research)"
+          echo ""
+          echo "🎬 END HOOK SYSTEM:"
+          echo "   • 3s: Mystery deepening ('The truth was buried...')"
+          echo "   • 2s: Category promise ('Dark history every Monday.')"
+          echo "   • Total: 5 seconds auto-appended to script"
+          echo ""
+          echo "🎯 TARGETS:"
+          echo "   • Script body: 73-94 words (35-45s)"
+          echo "   • End hook: 13 words (5s)"
+          echo "   • Total: 86-107 words (40-50s)"
+          echo "   • Retention: 64.1% average (proven)"
+          echo "════════════════════════════════════════════════"
           python .github/scripts/generate_trending_and_script.py
 
       - name: 🎙️ Generate mysterious voiceover
@@ -266,10 +308,11 @@ jobs:
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
         run: python .github/scripts/create_video.py
 
-      - name: 🎵 Verify audio mix levels
+      - name: 🔊 Verify audio mix levels
         if: steps.schedule_check.outputs.should_post == 'true'
         run: |
           echo "🔊 Checking audio levels in final video..."
+          echo "🎵 Background music: -45 dBFS (whisper quiet)"
           ffmpeg -i tmp/short.mp4 -af "volumedetect" -f null - 2>&1 | grep "mean_volume" || true
 
       - name: 🖼️ Generate mysterious thumbnail
@@ -333,6 +376,8 @@ jobs:
           TITLE=$(jq -r '.title' tmp/script.json)
           DESCRIPTION=$(jq -r '.description' tmp/script.json)
           HASHTAGS=$(jq -r '.hashtags | join(" ")' tmp/script.json)
+          CATEGORY=$(jq -r '.mystery_category // "unknown"' tmp/script.json)
+          HAS_END_HOOK=$(jq -r '.has_end_hook // false' tmp/script.json)
           VIDEO_PATH="${{ steps.find_and_compress.outputs.original_path }}"
           VIDEO_SIZE=$(stat -c%s "$VIDEO_PATH" 2>/dev/null || stat -f%z "$VIDEO_PATH")
           
@@ -348,9 +393,12 @@ jobs:
             "title": "$TITLE",
             "description": "$DESCRIPTION",
             "hashtags": "$HASHTAGS",
+            "category": "$CATEGORY",
+            "has_end_hook": $HAS_END_HOOK,
             "video_name": "$(basename "$VIDEO_PATH")",
             "video_size_mb": $(echo "scale=2; $VIDEO_SIZE/1024/1024" | bc),
             "workflow_run": "${{ github.run_number }}",
+            "workflow_version": "6.0_dark_content_end_hooks",
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "platform_urls": {
               "youtube": "$YOUTUBE_URL",
@@ -448,15 +496,33 @@ jobs:
       - name: 🔥 Workflow Summary
         if: always()
         run: |
-          echo "## 🔍 Mythica Report - Retention-Optimized Pipeline" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔍 Mythica Report v6.0 - Dark Content Pipeline" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**⏰ Run Time (UTC):** \`${{ steps.schedule_check.outputs.current_time }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**✅ Posted This Run:** \`${{ steps.schedule_check.outputs.should_post }}\`" >> $GITHUB_STEP_SUMMARY
+          
           if [[ "${{ steps.schedule_check.outputs.should_post }}" == "true" ]]; then
             echo "**⭐ Priority:** \`${{ steps.schedule_check.outputs.priority }}\`" >> $GITHUB_STEP_SUMMARY
             echo "**🔍 Content Type:** \`${{ steps.schedule_check.outputs.content_type }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "**🎯 Optimization:** Inverted pyramid structure (prevents 0:09 drop)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🆕 v6.0 Features Active:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 7-day predictable schedule (same category same day)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Dark History, Disturbing Medical, Dark Experiments categories" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 5-second end hooks (mystery + category promise)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Entity-based duplicate detection (blocks repeat topics)" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 0:09 cliff prevention (64.1% avg retention)" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📅 Next Scheduled Posts:" >> $GITHUB_STEP_SUMMARY
+            echo "- **Monday 20:00 UTC** - Dark History" >> $GITHUB_STEP_SUMMARY
+            echo "- **Tuesday 20:00 UTC** - Disappearances" >> $GITHUB_STEP_SUMMARY
+            echo "- **Wednesday 20:00 UTC** - Disturbing Medical" >> $GITHUB_STEP_SUMMARY
+            echo "- **Thursday 20:00 UTC** - Dark Experiments" >> $GITHUB_STEP_SUMMARY
+            echo "- **Friday 21:00 UTC** - Disappearances" >> $GITHUB_STEP_SUMMARY
+            echo "- **Saturday 20:00 UTC** - True Crime" >> $GITHUB_STEP_SUMMARY
+            echo "- **Sunday 20:00 UTC** - Paranormal" >> $GITHUB_STEP_SUMMARY
           else
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "> Workflow did not run (not a scheduled time)." >> $GITHUB_STEP_SUMMARY
+            echo "> ⏸️ Workflow did not run (not a scheduled time)." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Next post:** Check schedule above for timing." >> $GITHUB_STEP_SUMMARY
           fi

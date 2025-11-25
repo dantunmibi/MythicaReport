@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-🔮 Manage Mystery Playlists - MYTHICA REPORT VERSION
-Organizes videos into content pillars:
-- Unsolved Mysteries (25%)
-- Paranormal & Supernatural (25%)
-- True Crime Cases (20%)
-- Ancient Mysteries (15%)
-- Conspiracy Theories (10%)
-- Cryptids & Creatures (5%)
+🔮 Manage Mystery Playlists - MYTHICA REPORT v6.0
+Organizes videos into dark mystery content pillars:
+- Dark History: Forgotten Tragedies (20%)
+- Medical Mysteries: Conditions That Baffle Doctors (15%)
+- Dark Experiments: Secret Research Exposed (10%)
+- Vanished: Unsolved Disappearances (28%)
+- True Crime Files (14%)
+- Unexplained Phenomena (13%)
 """
 
 import os
@@ -45,105 +45,180 @@ def get_youtube_client():
         raise
 
 
-# 🔮 MYSTERY PLAYLIST CONFIGURATION
+# 🔮 MYSTERY PLAYLIST CONFIGURATION v6.0
 PLAYLIST_RULES = {
     "mystery": {
-        "unsolved": {
-            "title": "🔍 Unsolved Mysteries - Cases That Remain Open",
-            "description": "Cold cases, missing persons, and mysteries that still haunt investigators. The truth is still out there waiting to be discovered.",
+        # 🆕 NEW CATEGORY: Dark History (Mondays)
+        "dark_history": {
+            "title": "🕰️ Dark History: Forgotten Tragedies",
+            "description": "Real historical events with mysterious and disturbing elements. The Radium Girls. Centralia's eternal fire. Events history tried to bury. Dark facts told with mysterious intrigue, not educational lectures.",
             "keywords": [
-                "unsolved", "mystery", "cold case", "missing", "disappeared", "vanished",
-                "never found", "still missing", "unknown", "unexplained", "unanswered",
-                "investigation", "detective", "police", "search", "looking for",
-                "where is", "what happened", "no answers", "no explanation", "baffling",
-                "puzzling", "strange disappearance", "mysterious death", "unresolved",
-                "case", "remains open", "active investigation", "clues", "evidence",
-                "witnesses", "last seen", "trail went cold", "no leads", "questions"
+                "dark history", "forgotten", "tragedy", "historical", "history", "buried",
+                "covered up", "hidden", "suppressed", "lost", "erased", "destroyed",
+                "radium girls", "glowed", "glowing", "toxic", "poisoned", "radiation",
+                "centralia", "coal fire", "burning", "ghost town", "abandoned",
+                "disaster", "catastrophe", "event", "incident", "happened", "occurred",
+                "victims", "died", "killed", "death toll", "casualties", "perished",
+                "mysterious death", "unexplained deaths", "mass death", "epidemic",
+                "1900s", "1800s", "century", "decades ago", "years ago", "past",
+                "documentary", "investigation", "revealed", "discovered", "uncovered",
+                "truth", "facts", "evidence", "records", "files", "documents",
+                "government", "company", "corporation", "officials", "authorities",
+                "scandal", "corruption", "negligence", "criminal", "liability",
+                "workers", "factory", "mine", "industry", "labor", "exploitation",
+                "medical", "experiment", "treatment", "procedure", "disease", "illness"
             ]
         },
-        "paranormal": {
-            "title": "👻 Paranormal & Supernatural - Beyond Explanation",
-            "description": "Ghosts, hauntings, poltergeists, and phenomena that defy scientific explanation. Real encounters with the unknown.",
+        
+        # 🆕 NEW CATEGORY: Disturbing Medical (Wednesdays)
+        "disturbing_medical": {
+            "title": "🧬 Medical Mysteries: Conditions That Baffle Doctors",
+            "description": "Real medical conditions that defy explanation. Fatal insomnia. Turning to stone. Mysterious illnesses that terrify even doctors. Body horror meets medical mystery.",
             "keywords": [
-                "paranormal", "supernatural", "ghost", "haunted", "haunting", "spirit",
-                "poltergeist", "phantom", "apparition", "specter", "entity", "presence",
-                "demon", "possession", "exorcism", "evil", "dark", "shadow", "figure",
-                "orb", "evp", "electronic voice phenomenon", "manifestation",
-                "ouija", "seance", "medium", "psychic", "clairvoyant", "sixth sense",
-                "premonition", "deja vu", "telekinesis", "levitation", "supernatural",
-                "otherworldly", "unexplained phenomena", "strange occurrence",
-                "haunted house", "haunted location", "cemetery", "graveyard",
-                "investigation", "ghost hunter", "paranormal activity", "caught on camera"
+                "medical mystery", "condition", "disease", "illness", "syndrome",
+                "doctors baffled", "can't explain", "no cure", "no treatment", "no survivors",
+                "fatal", "deadly", "terminal", "progressive", "degenerative",
+                "fatal insomnia", "couldn't sleep", "no sleep", "insomnia", "awake",
+                "stone man", "turned to stone", "ossification", "bone", "calcification",
+                "fibrodysplasia", "fop", "rare disease", "genetic", "mutation",
+                "kuru", "laughing death", "prion", "brain disease", "neurodegenerative",
+                "mysterious symptoms", "baffling", "unexplained", "impossible",
+                "medical anomaly", "medical enigma", "case study", "patient zero",
+                "epidemic", "outbreak", "spread", "contagious", "transmission",
+                "minamata", "mercury", "poisoning", "contamination", "toxic",
+                "blindness", "paralysis", "seizures", "convulsions", "spasms",
+                "pain", "suffering", "agony", "torture", "unbearable",
+                "diagnosis", "misdiagnosed", "undiagnosed", "unknown cause",
+                "doctors", "specialists", "experts", "medical professionals",
+                "hospital", "clinic", "medical facility", "treatment center",
+                "research", "study", "investigation", "autopsy", "examination"
             ]
         },
+        
+        # 🆕 NEW CATEGORY: Dark Experiments (Thursdays)
+        "dark_experiments": {
+            "title": "🔬 Dark Experiments: Secret Research Exposed",
+            "description": "Declassified experiments. MK-Ultra's lost subjects. Stanford Prison gone wrong. Secret research that crossed ethical lines. Government and corporate experiments that should never have happened.",
+            "keywords": [
+                "dark experiment", "secret research", "unethical", "classified", "declassified",
+                "mk ultra", "mkultra", "cia", "mind control", "brainwashing", "lsd",
+                "stanford prison", "prison experiment", "psychological", "abuse",
+                "sleep deprivation", "couldn't sleep", "stayed awake", "experiment",
+                "subjects", "participants", "volunteers", "prisoners", "patients",
+                "testing", "tested on", "experimented on", "guinea pigs", "human trials",
+                "government", "military", "cia", "fbi", "agency", "department",
+                "project", "operation", "program", "initiative", "study",
+                "secret", "classified", "top secret", "redacted", "hidden",
+                "files", "documents", "records", "leaked", "released", "exposed",
+                "whistleblower", "insider", "revealed", "uncovered", "discovered",
+                "unethical", "illegal", "immoral", "wrong", "violation",
+                "human rights", "ethics", "consent", "informed", "forced",
+                "torture", "interrogation", "techniques", "methods", "procedures",
+                "psychological", "mental", "trauma", "ptsd", "damage",
+                "cover up", "covered up", "suppressed", "buried", "destroyed",
+                "victims", "survivors", "testimony", "accounts", "reports",
+                "shut down", "terminated", "ended", "stopped", "discontinued"
+            ]
+        },
+        
+        # EXISTING CATEGORY: Disappearances (Tuesdays & Fridays - your strength)
+        "disappearance": {
+            "title": "👤 Vanished: Unsolved Disappearances",
+            "description": "People who vanished without a trace. Flight 19. DB Cooper. Maura Murray. Cases that remain unsolved. The search continues.",
+            "keywords": [
+                "vanished", "disappeared", "missing", "gone", "never found", "no trace",
+                "unsolved", "mystery", "cold case", "still missing", "search",
+                "last seen", "sighting", "witness", "evidence", "clues",
+                "flight 19", "planes", "aircraft", "aviation", "triangle",
+                "db cooper", "hijacker", "parachute", "jumped", "skyjacker",
+                "maura murray", "car", "crash", "abandoned", "woods",
+                "brandon swanson", "phone call", "field", "rural", "farm",
+                "asha degree", "walked out", "highway", "storm", "night",
+                "elisa lam", "hotel", "water tank", "elevator", "footage",
+                "jonbenet ramsey", "pageant", "ransom", "note", "basement",
+                "zodiac", "killer", "cipher", "code", "letters", "taunting",
+                "investigation", "detective", "police", "fbi", "authorities",
+                "family", "loved ones", "parents", "waiting", "hoping",
+                "anniversary", "years later", "decades", "still looking",
+                "reward", "tip", "lead", "breakthrough", "development"
+            ]
+        },
+        
+        # EXISTING CATEGORY: True Crime (Saturdays)
         "true_crime": {
-            "title": "🔪 True Crime Cases - Dark Reality",
+            "title": "🔪 True Crime Files: Dark Reality",
             "description": "Real crime stories, criminal minds, and the investigations that brought them to justice. Warning: Dark content.",
             "keywords": [
                 "true crime", "murder", "killer", "serial killer", "crime", "criminal",
                 "investigation", "detective", "fbi", "police", "arrest", "convicted",
                 "trial", "court", "guilty", "innocent", "justice", "victim", "suspect",
                 "evidence", "forensic", "autopsy", "crime scene", "homicide", "death",
-                "kidnapping", "abduction", "assault", "robbery", "heist", "theft",
-                "fraud", "scam", "con artist", "criminal mind", "psychopath", "sociopath",
+                "zodiac killer", "black dahlia", "somerton man", "unidentified",
+                "cold case", "unsolved murder", "mystery", "baffling", "strange",
                 "motive", "alibi", "witness", "testimony", "confession", "caught",
                 "solved", "case closed", "breakthrough", "arrest", "manhunt",
                 "wanted", "escaped", "fugitive", "prison", "jail", "sentenced"
             ]
         },
+        
+        # EXISTING CATEGORY: Paranormal (Sundays)
+        "phenomena": {
+            "title": "👁️ Unexplained Phenomena: Beyond Science",
+            "description": "Strange occurrences, mysterious signals, impossible events. The Wow Signal. The Hum. Phenomena that defy scientific explanation.",
+            "keywords": [
+                "phenomena", "unexplained", "mysterious", "strange", "impossible",
+                "paranormal", "supernatural", "unexplainable", "baffling",
+                "wow signal", "signal", "radio", "space", "cosmos", "seti",
+                "the hum", "sound", "noise", "frequency", "hear", "hearing",
+                "hessdalen lights", "lights", "orbs", "ufo", "unidentified",
+                "ball lightning", "lightning", "electrical", "phenomenon",
+                "science", "scientists", "researchers", "experts", "baffled",
+                "no explanation", "can't explain", "defies", "contradicts",
+                "witnesses", "reported", "sightings", "observations", "documented",
+                "investigation", "study", "research", "analysis", "examination"
+            ]
+        },
+        
+        # DEPRECATED: Merged into dark_history
         "ancient": {
-            "title": "🗿 Ancient Mysteries - Lost Civilizations",
-            "description": "Ancient ruins, lost civilizations, archaeological enigmas. Secrets buried in time that challenge everything we know about history.",
-            "keywords": [
-                "ancient", "civilization", "lost", "ruins", "archaeological", "archaeology",
-                "egypt", "pyramid", "pharaoh", "tomb", "hieroglyphics", "mummy",
-                "atlantis", "lemuria", "mu", "ancient astronaut", "alien", "extraterrestrial",
-                "sumerian", "anunnaki", "babylonian", "mesopotamia", "ancient technology",
-                "oopart", "out of place artifact", "ancient mystery", "unexplained structure",
-                "megalith", "stonehenge", "easter island", "moai", "nazca lines",
-                "machu picchu", "inca", "maya", "aztec", "olmec", "temple", "monument",
-                "antikythera", "baghdad battery", "ancient knowledge", "forbidden",
-                "hidden history", "alternative history", "ancient alien", "gods",
-                "legend", "myth", "folklore", "ancient text", "dead sea scrolls",
-                "ancient civilization", "advanced technology", "before history"
-            ]
+            "title": "🗿 Ancient Mysteries: Lost Civilizations [DEPRECATED - Use Dark History]",
+            "description": "Merged into Dark History category for better organization.",
+            "keywords": ["deprecated"]
         },
+        
+        # DEPRECATED: Merged into dark_experiments
         "conspiracy": {
-            "title": "🕵️ Conspiracy Theories - Question Everything",
-            "description": "Government secrets, cover-ups, and hidden agendas. Connecting dots others won't see. Think for yourself.",
-            "keywords": [
-                "conspiracy", "theory", "cover up", "coverup", "hidden", "secret",
-                "government", "cia", "fbi", "nsa", "classified", "top secret", "redacted",
-                "they don't want you to know", "suppressed", "censored", "banned",
-                "illuminati", "new world order", "nwo", "elite", "cabal", "deep state",
-                "shadow government", "puppet master", "control", "manipulation",
-                "false flag", "psyop", "operation", "agenda", "plan", "scheme",
-                "wake up", "truth", "real truth", "hidden truth", "exposed", "reveal",
-                "leak", "whistleblower", "insider", "anonymous", "disclosure",
-                "ufo", "area 51", "roswell", "alien", "extraterrestrial", "contact",
-                "mk ultra", "project", "experiment", "testing", "program",
-                "assassination", "jfk", "conspiracy theory", "questioned", "suspicious"
-            ]
+            "title": "🕵️ Conspiracy Theories [DEPRECATED - Use Dark Experiments]",
+            "description": "Merged into Dark Experiments category for better framing.",
+            "keywords": ["deprecated"]
         },
+        
+        # REMOVED: Low retention category
         "cryptids": {
-            "title": "🦎 Cryptids & Creatures - Things That Shouldn't Exist",
-            "description": "Bigfoot, lake monsters, and creatures from the shadows. Eyewitness accounts of beings science won't acknowledge.",
-            "keywords": [
-                "cryptid", "creature", "monster", "beast", "unknown", "unidentified",
-                "bigfoot", "sasquatch", "yeti", "abominable snowman", "skunk ape",
-                "loch ness", "nessie", "lake monster", "sea serpent", "sea creature",
-                "chupacabra", "mothman", "jersey devil", "dogman", "werewolf",
-                "wendigo", "skinwalker", "crawler", "rake", "goatman", "lizard man",
-                "thunderbird", "giant bird", "pterodactyl", "living dinosaur",
-                "mokele mbembe", "kongamato", "giant", "huge", "massive creature",
-                "sighting", "encounter", "spotted", "seen", "witness", "eyewitness",
-                "caught on camera", "footage", "video", "photo", "evidence", "proof",
-                "real", "exists", "found", "discovered", "track", "footprint", "print",
-                "howl", "scream", "sound", "call", "cry", "roar", "mysterious animal",
-                "unknown species", "undiscovered", "hidden", "elusive", "legendary"
-            ]
+            "title": "🦎 Cryptids & Creatures [REMOVED]",
+            "description": "Removed due to low retention performance.",
+            "keywords": ["removed"]
         }
     }
+}
+
+# 🆕 v6.0: Category aliases for backward compatibility
+CATEGORY_ALIASES = {
+    "historical": "dark_history",
+    "historical_mystery": "dark_history",
+    "ancient": "dark_history",
+    "medical": "disturbing_medical",
+    "medical_mystery": "disturbing_medical",
+    "experiments": "dark_experiments",
+    "dark_science": "dark_experiments",
+    "conspiracy": "dark_experiments",
+    "unsolved": "disappearance",
+    "disappearance_mystery": "disappearance",
+    "crime": "true_crime",
+    "crime_mystery": "true_crime",
+    "true_crime": "true_crime",
+    "paranormal": "phenomena",
+    "phenomena_mystery": "phenomena",
 }
 
 
@@ -170,6 +245,10 @@ def fetch_and_map_existing_playlists(youtube, niche, config):
     
     # Map to categories using fuzzy matching
     for category, rules in PLAYLIST_RULES[niche].items():
+        # Skip deprecated/removed categories
+        if rules.get("keywords") == ["deprecated"] or rules.get("keywords") == ["removed"]:
+            continue
+            
         key = f"{niche}_{category}"
         match = None
         
@@ -229,11 +308,17 @@ def get_or_create_playlist(youtube, niche, category, config):
     # Create new playlist
     try:
         playlist_info = PLAYLIST_RULES[niche][category]
+        
+        # Skip deprecated/removed categories
+        if playlist_info.get("keywords") == ["deprecated"] or playlist_info.get("keywords") == ["removed"]:
+            print(f"⚠️ Category '{category}' is deprecated/removed, skipping playlist creation")
+            return None
+        
         title = playlist_info["title"]
         description = playlist_info["description"]
         
         # Add branding
-        full_description = f"{description}\n\n🔮 Mythica Report - Investigating mysteries the world forgot.\nSubscribe for weekly deep dives into the unexplained. #mystery #unexplained #mythica"
+        full_description = f"{description}\n\n🔮 Mythica Report v6.0 - Dark mysteries told with film noir intrigue.\nNew dark content every week. #mystery #unexplained #mythica #darkhistory"
         
         request = youtube.playlists().insert(
             part="snippet,status",
@@ -259,7 +344,25 @@ def get_or_create_playlist(youtube, niche, category, config):
 
 
 def categorize_video(video_metadata, niche):
-    """Smart categorization using keyword matching"""
+    """
+    🆕 v6.0: Smart categorization with dark content support
+    Checks script metadata first, then falls back to keyword matching
+    """
+    
+    # 🆕 NEW: Check script metadata for category (most accurate)
+    mystery_category = video_metadata.get("mystery_category")
+    if mystery_category:
+        # Normalize using aliases
+        normalized = CATEGORY_ALIASES.get(mystery_category, mystery_category)
+        
+        # Verify it's a valid, active category
+        if normalized in PLAYLIST_RULES.get(niche, {}):
+            rules = PLAYLIST_RULES[niche][normalized]
+            if rules.get("keywords") not in [["deprecated"], ["removed"]]:
+                print(f"   📂 Using script category: {normalized} (from metadata)")
+                return normalized
+    
+    # Fallback to keyword matching
     text = " ".join([
         video_metadata.get("title", ""),
         video_metadata.get("description", ""),
@@ -273,6 +376,10 @@ def categorize_video(video_metadata, niche):
     
     scores = {}
     for category, rules in PLAYLIST_RULES[niche].items():
+        # Skip deprecated/removed categories
+        if rules.get("keywords") in [["deprecated"], ["removed"]]:
+            continue
+        
         score = 0
         
         # Exact keyword matches
@@ -293,14 +400,14 @@ def categorize_video(video_metadata, niche):
                             if ratio > 0.85:
                                 score += 1
         
-        # Bonus for power phrases
+        # 🆕 Bonus for category-specific power phrases
         power_phrases = {
-            "unsolved": ["unsolved mystery", "cold case", "still missing", "never found", "remains open"],
-            "paranormal": ["paranormal activity", "caught on camera", "ghost", "haunted", "supernatural"],
-            "true_crime": ["true crime", "serial killer", "murder investigation", "criminal mind"],
-            "ancient": ["ancient mystery", "lost civilization", "ancient alien", "forbidden history"],
-            "conspiracy": ["conspiracy theory", "cover up", "they don't want", "hidden truth", "exposed"],
-            "cryptids": ["cryptid", "bigfoot", "creature", "caught on camera", "unknown species"]
+            "dark_history": ["dark history", "radium girls", "glowed", "centralia", "tragedy", "forgotten", "buried"],
+            "disturbing_medical": ["medical mystery", "doctors baffled", "can't explain", "fatal insomnia", "turned to stone", "condition"],
+            "dark_experiments": ["mk ultra", "stanford prison", "experiment", "classified", "cia", "secret research", "declassified"],
+            "disappearance": ["vanished", "disappeared", "missing", "never found", "flight 19", "db cooper"],
+            "true_crime": ["true crime", "serial killer", "murder", "zodiac", "investigation"],
+            "phenomena": ["unexplained", "wow signal", "the hum", "phenomenon", "scientists baffled"]
         }
         
         if category in power_phrases:
@@ -316,8 +423,9 @@ def categorize_video(video_metadata, niche):
         print(f"   📂 Categorized as: {best} (score: {scores[best]})")
         return best
     
-    print("   ⚠️ No match, defaulting to 'unsolved'")
-    return "unsolved"
+    # Default to disappearance (your proven strength)
+    print("   ⚠️ No match, defaulting to 'disappearance'")
+    return "disappearance"
 
 
 def add_video_to_playlist(youtube, video_id, playlist_id):
@@ -388,14 +496,15 @@ def add_video_to_playlist(youtube, video_id, playlist_id):
 
 def organize_playlists(youtube, history, config, niche):
     """Main organization function"""
-    print(f"\n🎬 Organizing {len(history)} videos into playlists...")
+    print(f"\n🎬 Organizing {len(history)} videos into playlists (v6.0 - Dark Content)...")
     
     stats = {
         "total_videos": len(history),
         "categorized": 0,
         "added_to_playlists": 0,
         "already_in_playlists": 0,
-        "failed": 0
+        "failed": 0,
+        "by_category": defaultdict(int)
     }
     
     for video in history:
@@ -415,6 +524,7 @@ def organize_playlists(youtube, history, config, niche):
             continue
         
         stats["categorized"] += 1
+        stats["by_category"][category] += 1
         
         # Get/create playlist
         playlist_id = get_or_create_playlist(youtube, niche, category, config)
@@ -434,15 +544,28 @@ def organize_playlists(youtube, history, config, niche):
     return stats
 
 
-def print_playlist_summary(config, niche):
-    """Print summary"""
+def print_playlist_summary(config, niche, stats):
+    """Print summary with v6.0 categories"""
     print("\n" + "="*70)
-    print("🔮 MYTHICA REPORT PLAYLIST SUMMARY")
+    print("🔮 MYTHICA REPORT v6.0 PLAYLIST SUMMARY")
     print("="*70)
     
     if niche in PLAYLIST_RULES:
+        active_categories = []
+        deprecated_categories = []
+        
         for category, rules in PLAYLIST_RULES[niche].items():
+            # Separate active from deprecated
+            if rules.get("keywords") in [["deprecated"], ["removed"]]:
+                deprecated_categories.append((category, rules))
+            else:
+                active_categories.append((category, rules))
+        
+        # Show active playlists
+        print("\n🆕 ACTIVE PLAYLISTS (v6.0):")
+        for category, rules in active_categories:
             key = f"{niche}_{category}"
+            video_count = stats.get("by_category", {}).get(category, 0)
             
             if key in config:
                 playlist_id = config[key]
@@ -450,19 +573,27 @@ def print_playlist_summary(config, niche):
                 
                 print(f"\n{rules['title']}")
                 print(f"   📍 Category: {category}")
+                print(f"   📊 Videos: {video_count}")
                 print(f"   🔗 URL: {url}")
                 print(f"   📝 {rules['description'][:80]}...")
             else:
                 print(f"\n⚠️ {rules['title']}")
-                print(f"   Status: Will be auto-created")
+                print(f"   Status: Will be auto-created on first video")
+        
+        # Show deprecated (if any exist)
+        if deprecated_categories:
+            print("\n⚠️ DEPRECATED CATEGORIES (merged into others):")
+            for category, rules in deprecated_categories:
+                print(f"   • {category} → {rules['description']}")
 
 
 if __name__ == "__main__":
-    print("🔮 Mythica Report - YouTube Playlist Auto-Organizer")
+    print("🔮 Mythica Report v6.0 - YouTube Playlist Auto-Organizer")
     print("="*70)
     
     niche = "mystery"
     print(f"🎯 Channel Niche: {niche}")
+    print(f"🆕 v6.0 Features: Dark History, Medical Mysteries, Dark Experiments")
     
     # Load data
     history = load_upload_history()
@@ -494,9 +625,16 @@ if __name__ == "__main__":
     print(f"📋 Already in playlists: {stats['already_in_playlists']}")
     print(f"❌ Failed: {stats['failed']}")
     
+    # Breakdown by category
+    if stats.get("by_category"):
+        print("\n📂 Videos by Category:")
+        for category, count in sorted(stats["by_category"].items(), key=lambda x: x[1], reverse=True):
+            print(f"   • {category}: {count} videos")
+    
     # Summary
-    print_playlist_summary(config, niche)
+    print_playlist_summary(config, niche, stats)
     
     print("\n✅ Playlist organization complete! 🔮")
-    print("\n💡 Your mystery playlists will automatically grow with each upload!")
+    print("\n💡 Your dark mystery playlists will automatically grow with each upload!")
+    print("   Categories: Dark History (Mon), Medical (Wed), Experiments (Thu)")
     print("   Keep your audience hooked on the unexplained! 👁️")
