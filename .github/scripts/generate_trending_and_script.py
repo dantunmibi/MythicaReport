@@ -735,11 +735,11 @@ def build_mystery_prompt(content_type, priority, mystery_type, trends, history):
     trending_summaries = []
     
     if trends and trends.get('topics'):
-        trending_topics = trends['topics'][:15]
+        trending_topics = trends['topics'][:5]
         full_data = trends.get('full_data', [])
         
         if full_data:
-            for item in full_data[:15]:
+            for item in full_data[:5]:
                 viral_score = item.get('viral_score', 'N/A')
                 trending_summaries.append(
                     f"• [{viral_score}] {item['topic_title']}\n"
