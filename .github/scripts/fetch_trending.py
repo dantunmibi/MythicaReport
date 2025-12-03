@@ -704,7 +704,7 @@ OUTPUT (JSON):
                 raise json.JSONDecodeError("No JSON found", result_text, 0)
                 
             trending_ideas = []
-            for item in data.get('selected_topics', [])[:5]:
+            for item in data.get('selected_topics', [])[:15]:
                 title = item.get('title', 'Unknown Mystery')
                 
                 # ✅ VALIDATE TITLE PATTERN
