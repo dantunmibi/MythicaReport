@@ -20,6 +20,25 @@ from datetime import datetime, timedelta
 import google.generativeai as genai
 import requests
 from bs4 import BeautifulSoup
+import argparse
+
+# ========================================================================
+# CATEGORY-AWARE FETCHING (v6.0.9)
+# ========================================================================
+parser = argparse.ArgumentParser(description='Fetch trending mystery topics for Mythica Report')
+parser.add_argument(
+    '--category', 
+    type=str, 
+    default='general',
+    choices=['general', 'disturbing_medical', 'dark_experiments', 'dark_history', 
+             'disappearance', 'phenomena', 'crime', 'conspiracy'],
+    help='Mystery category to fetch trending topics for'
+)
+args = parser.parse_args()
+
+MYSTERY_CATEGORY = args.category
+
+print(f"🎯 CATEGORY-AWARE FETCH: {MYSTERY_CATEGORY}")
 
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -62,6 +81,278 @@ def load_history():
     print("📂 No previous history found, starting fresh")
     return {'topics': [], 'version': '6.0.1_entity_fix'}
 
+def get_category_search_terms(category: str) -> List[str]:
+    """
+    🆕 v6.0.9: Get category-specific search terms for trending APIs
+    
+    Returns list of search queries optimized for each mystery category
+    """
+    
+    category_terms = {
+        'disturbing_medical': [
+            # Medical conditions
+            'rare disease mystery',
+            'fatal familial insomnia',
+            'mysterious illness',
+            'kuru disease',
+            'dancing plague',
+            'mass hysteria medical',
+            'unexplained syndrome',
+            'medical anomaly',
+            
+            # Historical medical
+            'radium girls',
+            'minamata disease',
+            'encephalitis lethargica',
+            'tanganyika laughing epidemic',
+            'ergotism',
+            
+            # Body horror
+            'fibrodysplasia ossificans progressiva',
+            'turning to stone disease',
+            'mystery paralysis',
+            'sleeping sickness',
+            'radiation poisoning victims'
+        ],
+        
+        'dark_experiments': [
+            # Government experiments
+            'mk ultra',
+            'mkultra declassified',
+            'stanford prison experiment',
+            'milgram experiment',
+            'tuskegee experiment',
+            'unit 731',
+            
+            # Secret research
+            'secret government experiments',
+            'cia mind control',
+            'project artichoke',
+            'project bluebird',
+            'midnight climax',
+            'edgewood arsenal',
+            
+            # Psychological
+            'unethical human experiments',
+            'sleep deprivation experiment',
+            'russian sleep experiment',
+            'psychological torture experiments',
+            'behavior modification research'
+        ],
+        
+        'dark_history': [
+            # Historical mysteries
+            'dark historical events',
+            'mysterious 1800s incident',
+            'dark day 1780',
+            'mysterious historical phenomenon',
+            
+            # Specific events
+            'radium girls story',
+            'dancing plague 1518',
+            'strasbourg dancing mania',
+            'kentucky meat shower',
+            'roanoke colony mystery',
+            
+            # Time periods
+            'victorian mysteries',
+            'medieval unexplained events',
+            'colonial era mysteries',
+            'industrial revolution disasters',
+            '19th century mysteries',
+            'historical mass poisoning'
+        ],
+        
+        'disappearance': [
+            # Classic disappearances
+            'missing person mystery',
+            'unsolved disappearance',
+            'vanished without trace',
+            
+            # Famous cases
+            'dyatlov pass incident',
+            'db cooper mystery',
+            'amelia earhart disappearance',
+            'flight 19 bermuda triangle',
+            'mh370 mystery',
+            'maura murray case',
+            
+            # Categories
+            'national park disappearances',
+            'missing 411',
+            'vanished hikers',
+            'missing climbers',
+            'lost at sea mysteries',
+            'ghost ship mary celeste'
+        ],
+        
+        'phenomena': [
+            # Space/cosmic
+            'wow signal',
+            'mysterious space signal',
+            'fast radio burst',
+            'unexplained radio transmission',
+            
+            # Lights
+            'hessdalen lights',
+            'marfa lights',
+            'brown mountain lights',
+            'ufo sighting',
+            'uap phenomenon',
+            
+            # Sounds
+            'the hum phenomenon',
+            'taos hum',
+            'skyquake mystery',
+            'bloop sound',
+            'underwater sounds',
+            
+            # Paranormal
+            'numbers stations',
+            'mysterious broadcasts',
+            'unexplained phenomenon',
+            'paranormal activity',
+            'glitch in the matrix stories'
+        ],
+        
+        'crime': [
+            # Serial killers
+            'zodiac killer',
+            'zodiac cipher',
+            'jack the ripper',
+            'golden state killer',
+            
+            # Unsolved murders
+            'jonbenet ramsey case',
+            'black dahlia murder',
+            'somerton man mystery',
+            'boy in the box case',
+            
+            # Cold cases
+            'unsolved murder mystery',
+            'cold case files',
+            'true crime unsolved',
+            'mysterious death case',
+            'murder mystery unsolved'
+        ],
+        
+        'conspiracy': [
+            # Classic conspiracies
+            'area 51 secrets',
+            'philadelphia experiment',
+            'montauk project',
+            
+            # Cover-ups
+            'government coverup',
+            'classified documents leaked',
+            'conspiracy theory',
+            'unexplained government activity'
+        ],
+        
+        'general': [
+            # Broad mystery terms
+            'unsolved mysteries',
+            'strange disappearances',
+            'unexplained phenomena',
+            'creepy stories',
+            'historical mysteries',
+            'internet mysteries',
+            'true crime mysteries'
+        ]
+    }
+    
+    selected_terms = category_terms.get(category, category_terms['general'])
+    
+    print(f"   🔍 Using {len(selected_terms)} category-specific search terms for '{category}'")
+    
+    return selected_terms
+
+def get_category_subreddits(category: str) -> List[str]:
+    """
+    🆕 v6.0.9: Get category-specific subreddits
+    
+    Returns list of subreddits optimized for each mystery category
+    """
+    
+    category_subreddits = {
+        'disturbing_medical': [
+            'UnresolvedMysteries',
+            'creepy',
+            'medizzy',
+            'morbidquestions',
+            'TrueCreepy',
+            'nosleep',  # fictional but sometimes based on real conditions
+            'medical'
+        ],
+        
+        'dark_experiments': [
+            'UnresolvedMysteries',
+            'conspiracy',
+            'TrueCrime',
+            'history',
+            'todayilearned',
+            'psychology'
+        ],
+        
+        'dark_history': [
+            'history',
+            'HistoryMemes',
+            'UnresolvedMysteries',
+            'creepy',
+            'TrueHistoricalMystery',
+            'historicalrage'
+        ],
+        
+        'disappearance': [
+            'UnresolvedMysteries',
+            'Missing411',
+            'TrueCrime',
+            'RBI',
+            'mystery',
+            'UnsolvedMurders'
+        ],
+        
+        'phenomena': [
+            'HighStrangeness',
+            'Glitch_in_the_Matrix',
+            'UnexplainedPhotos',
+            'Paranormal',
+            'UFOs',
+            'astronomy',
+            'space'
+        ],
+        
+        'crime': [
+            'TrueCrime',
+            'UnresolvedMysteries',
+            'UnsolvedMurders',
+            'serialkillers',
+            'ColdCases',
+            'mystery'
+        ],
+        
+        'conspiracy': [
+            'conspiracy',
+            'UnresolvedMysteries',
+            'HighStrangeness',
+            'AlternativeHistory'
+        ],
+        
+        'general': [
+            'UnsolvedMysteries',
+            'HighStrangeness',
+            'Glitch_in_the_Matrix',
+            'creepy',
+            'RBI',
+            'TrueCrime'
+        ]
+    }
+    
+    selected_subs = category_subreddits.get(category, category_subreddits['general'])
+    
+    print(f"   📱 Using {len(selected_subs)} category-specific subreddits for '{category}'")
+    
+    return selected_subs
 
 def get_google_trends_mystery() -> List[str]:
     """Get real trending mystery-related searches from Google Trends"""
@@ -78,25 +369,8 @@ def get_google_trends_mystery() -> List[str]:
         
         relevant_trends = []
         
-        mystery_topics = [
-            'unsolved mysteries',
-            'strange disappearances',
-            'unexplained phenomena',
-            'creepy stories',
-            'historical mysteries',
-            'dyatlov pass incident',
-            'db cooper',
-            'zodiac killer',
-            'roanoke colony',
-            'jonbenet ramsey',
-            'internet mysteries',
-            'cicada 3301',
-            'glitch in the matrix',
-            'mandela effect',
-            'ufo sightings',
-            'skinwalker ranch',
-            'haunted places'
-        ]
+        mystery_topics = get_category_search_terms(MYSTERY_CATEGORY)
+        print(f"   🎯 Searching Google Trends for '{MYSTERY_CATEGORY}' topics...")
         
         for topic in mystery_topics:
             try:
@@ -165,15 +439,15 @@ def get_reddit_mystery_trends() -> List[str]:
         print("🔮 Fetching Reddit mystery trends...")
 
         # Expanded subreddit list
-        subreddits = [
-            'UnsolvedMysteries', 'HighStrangeness', 'Glitch_in_the_Matrix',
-            'creepy', 'RBI', 'InternetIsBeautiful', 'StrangeUnexplained', 'TrueCrime'
-        ]
+        subreddits = get_category_subreddits(MYSTERY_CATEGORY)
+        
+        print(f"   🎯 Searching Reddit for '{MYSTERY_CATEGORY}' topics...")
 
         trends = []
 
         # Randomize 4 subreddits per run
-        for subreddit in random.sample(subreddits, 4):
+        sample_size = min(4, len(subreddits))
+        for subreddit in random.sample(subreddits, sample_size):
             urls = [
                 f'https://www.reddit.com/r/{subreddit}/hot.json?limit=25',
                 f'https://www.reddit.com/r/{subreddit}/new.json?limit=25',
@@ -252,13 +526,13 @@ def get_youtube_mystery_trends() -> List[str]:
     try:
         print("🔮 Fetching YouTube trending mystery videos...")
         
-        search_queries = [
-            'unsolved mysteries',
-            'terrifying stories',
-            'unexplained videos',
-            'strange disappearances',
-            'internet mysteries'
-        ]
+        # 🆕 v6.0.9: Use category-specific search queries
+        category_terms = get_category_search_terms(MYSTERY_CATEGORY)
+        
+        # Select top 5 most specific terms for YouTube
+        search_queries = category_terms[:5]
+        
+        print(f"   🎯 Searching YouTube for '{MYSTERY_CATEGORY}' topics...")
         
         trends = []
         
@@ -809,8 +1083,9 @@ def save_trending_data(trending_ideas: List[Dict[str, Any]]):
         "timestamp": time.time(),
         "niche": "mystery_stories",
         "channel": "Mythica Report",
-        "source": "google_trends + reddit + youtube + evergreen + gemini_ranking",
-        "version": "6.0.1_entity_fix"
+        "source": f"google_trends + reddit + youtube + evergreen + gemini_ranking (category: {MYSTERY_CATEGORY})",
+        "version": "6.0.9_category_aware",
+        "category": MYSTERY_CATEGORY  # 🆕 Track which category was fetched
     }
     
     trending_file = os.path.join(TMP, "trending.json")

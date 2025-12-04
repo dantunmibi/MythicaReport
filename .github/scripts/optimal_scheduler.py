@@ -89,7 +89,7 @@ def check_schedule():
     if yesterday_name in weekly_schedule:
         for slot in weekly_schedule[yesterday_name]:
             slot_hour, slot_minute = map(int, slot['time'].split(':'))
-            if slot_hour >= 22:  # Only check late-night slots
+            if slot_hour >= 18:  # Check evening and late-night slots (covers all 20:00-23:00 posts)
                 slot_datetime = yesterday.replace(hour=slot_hour, minute=slot_minute, second=0, microsecond=0)
                 time_diff_minutes = abs((now - slot_datetime).total_seconds() / 60)
                 

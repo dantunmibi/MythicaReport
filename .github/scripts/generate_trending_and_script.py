@@ -147,6 +147,319 @@ def load_trending():
             return None
     return None
 
+def filter_trending_by_category(trends, mystery_type):
+    """
+    🆕 v6.0.9: Filter trending topics to match mystery category
+    
+    Prevents category mismatches (e.g., Tunguska Event for medical category)
+    
+    Args:
+        trends: Trending data from fetch_trending.py
+        mystery_type: Target category (disturbing_medical, dark_experiments, etc.)
+    
+    Returns:
+        Filtered trending data (None if no matches)
+    """
+    
+    if not trends or not trends.get('topics'):
+        return None
+    
+    # ========================================================================
+    # EXPANDED CATEGORY KEYWORD LIBRARY
+    # ========================================================================
+    category_keywords = {
+        'disturbing_medical': {
+            'required': [
+                # Medical conditions
+                'disease', 'illness', 'syndrome', 'condition', 'disorder',
+                'epidemic', 'outbreak', 'pandemic', 'infection', 'contagion',
+                
+                # Symptoms
+                'fatal', 'insomnia', 'paralysis', 'paralyzed', 'blind', 'blindness',
+                'deaf', 'mute', 'laughing', 'crying', 'shaking', 'tremors',
+                'seizures', 'convulsions', 'coma', 'unconscious',
+                
+                # Body horror
+                'turned to stone', 'petrified', 'ossification', 'fop',
+                "couldn't sleep", "couldn't wake", "never slept", "never woke",
+                'glowing', 'radium', 'radiation poisoning',
+                
+                # Medical terms
+                'medical', 'hospital', 'doctor', 'physician', 'patient',
+                'diagnosis', 'treatment', 'cure', 'therapy', 'symptoms',
+                'prognosis', 'autopsy', 'pathology', 'virus', 'bacteria',
+                
+                # Specific conditions (case names)
+                'kuru', 'fatal familial insomnia', 'ffi', 'fibrodysplasia',
+                'minamata', 'dancing plague', 'encephalitis lethargica',
+                'sleeping sickness', 'ergotism', 'tanganyika', 'mass hysteria',
+                'conversion disorder', 'psychogenic', 'radiation sickness'
+            ],
+            'forbidden': [
+                'explosion', 'blast', 'meteor', 'asteroid', 'comet',
+                'earthquake', 'tsunami', 'volcano', 'natural disaster',
+                'war', 'battle', 'military', 'soldier', 'army',
+                'ship', 'plane crash', 'flight', 'aircraft', 'vessel',
+                'treasure', 'gold', 'riches', 'artifact', 'manuscript',
+                'code', 'cipher', 'puzzle', 'signal from space'
+            ]
+        },
+        
+        'dark_experiments': {
+            'required': [
+                # Experiment types
+                'experiment', 'study', 'research', 'test', 'trial',
+                'project', 'program', 'operation', 'investigation',
+                
+                # Organizations
+                'cia', 'fbi', 'kgb', 'soviet', 'russian', 'government',
+                'military', 'navy', 'army', 'agency', 'intelligence',
+                
+                # Classified/secret
+                'classified', 'secret', 'hidden', 'covered up', 'coverup',
+                'declassified', 'files', 'documents', 'leaked', 'exposed',
+                
+                # Specific experiments
+                'mk-ultra', 'mkultra', 'mk ultra', 'artichoke', 'bluebird',
+                'midnight climax', 'stanford prison', 'milgram', 'tuskegee',
+                'unit 731', 'edgewood arsenal', 'project paperclip',
+                
+                # Research terms
+                'subjects', 'participants', 'volunteers', 'tested on',
+                'exposed to', 'administered', 'dosage', 'laboratory',
+                'clinical trial', 'human testing', 'guinea pigs',
+                
+                # Psychological
+                'psychological', 'mind control', 'brainwashing', 'torture',
+                'interrogation', 'sleep deprivation', 'sensory deprivation',
+                'behavior modification', 'conditioning', 'trauma-based'
+            ],
+            'forbidden': [
+                'meteor', 'asteroid', 'space', 'cosmic', 'alien',
+                'natural disaster', 'earthquake', 'tsunami', 'volcano',
+                'ship sinking', 'plane crash', 'flight disappearance',
+                'treasure hunt', 'lost gold', 'artifact mystery',
+                'disease outbreak' # (unless caused by experiment)
+            ]
+        },
+        
+        'dark_history': {
+            'required': [
+                # Time periods (century markers)
+                '1400s', '1500s', '1600s', '1700s', '1800s', '1900s',
+                '15th century', '16th century', '17th century', '18th century',
+                '19th century', '20th century', 'medieval', 'colonial',
+                'victorian', 'elizabethan', 'renaissance',
+                
+                # Historical terms
+                'historical', 'history', 'ancient', 'old', 'past',
+                'era', 'period', 'age', 'time', 'years ago',
+                
+                # Places
+                'town', 'village', 'city', 'colony', 'settlement',
+                'castle', 'manor', 'estate', 'plantation', 'fort',
+                
+                # Events
+                'event', 'incident', 'occurrence', 'phenomenon', 'disaster',
+                'tragedy', 'catastrophe', 'outbreak', 'epidemic', 'plague',
+                
+                # Mysterious occurrences
+                'dark day', 'black sun', 'sky turned', 'rained meat',
+                'rained blood', 'dancing plague', 'dancing mania',
+                'radium girls', 'glowing', 'luminous', 'mass hysteria',
+                'mass poisoning', 'mysterious deaths', 'unexplained deaths',
+                
+                # Historical figures (generic)
+                'people who', 'villagers who', 'workers who', 'settlers who',
+                'colonists', 'factory workers', 'miners', 'sailors'
+            ],
+            'forbidden': [
+                'modern', '2000s', '2010s', '2020s', 'recent', 'today',
+                'this year', 'last year', 'current', 'ongoing',
+                'space signal', 'satellite', 'internet', 'computer',
+                'digital', 'online', 'social media', 'reddit', 'youtube'
+            ]
+        },
+        
+        'phenomena': {
+            'required': [
+                # Phenomena types
+                'phenomenon', 'phenomena', 'anomaly', 'anomalies',
+                'unexplained', 'mysterious', 'strange', 'bizarre',
+                'impossible', 'defies explanation', 'paranormal',
+                
+                # Space/cosmic
+                'signal', 'space signal', 'radio signal', 'transmission',
+                'wow signal', 'fast radio burst', 'frb', 'pulsar',
+                'cosmic', 'stellar', 'interstellar', 'extraterrestrial',
+                
+                # Lights/visual
+                'lights', 'light', 'glow', 'glowing', 'illumination',
+                'aurora', 'orbs', 'spheres', 'ufo', 'uap', 'sighting',
+                'hessdalen lights', 'marfa lights', 'brown mountain lights',
+                
+                # Sound
+                'sound', 'noise', 'hum', 'the hum', 'taos hum',
+                'bloop', 'underwater sound', 'skyquake', 'trumpet sounds',
+                'mysterious broadcasts', 'numbers stations', 'radio broadcasts',
+                
+                # Paranormal
+                'ghost', 'apparition', 'haunting', 'poltergeist', 'spirit',
+                'phantom', 'supernatural', 'otherworldly', 'dimensional',
+                'portal', 'vortex', 'time slip', 'glitch in matrix',
+                
+                # Unexplained events
+                'appeared', 'vanished', 'materialized', 'dematerialized',
+                'teleportation', 'levitation', 'spontaneous combustion'
+            ],
+            'forbidden': [
+                'murder', 'killed', 'crime', 'investigation', 'detective',
+                'medical condition', 'disease', 'illness', 'syndrome',
+                'experiment', 'study', 'research', 'classified'
+            ]
+        },
+        
+        'crime': {
+            'required': [
+                # Crime types
+                'murder', 'killed', 'murdered', 'slain', 'death',
+                'homicide', 'manslaughter', 'killing', 'serial killer',
+                
+                # Investigation
+                'crime', 'case', 'cold case', 'unsolved', 'investigation',
+                'detective', 'police', 'fbi', 'forensic', 'evidence',
+                'clues', 'suspect', 'witness', 'testimony', 'trial',
+                
+                # Victims/criminals
+                'victim', 'victims', 'killer', 'murderer', 'criminal',
+                'perpetrator', 'suspect', 'person of interest',
+                
+                # Specific cases
+                'zodiac', 'zodiac killer', 'jack the ripper', 'black dahlia',
+                'jonbenet', 'jonbenet ramsey', 'missing person', 'amber alert',
+                
+                # True crime terms
+                'true crime', 'mystery', 'who killed', 'who murdered',
+                'unsolved murder', 'cold case files', 'disappeared',
+                'last seen', 'body found', 'remains discovered'
+            ],
+            'forbidden': [
+                'meteor', 'asteroid', 'space', 'cosmic', 'alien',
+                'natural disaster', 'earthquake', 'volcano',
+                'medical condition', 'disease outbreak',
+                'signal', 'radio transmission', 'paranormal'
+            ]
+        },
+        
+        'disappearance': {
+            'required': [
+                # Core disappearance terms
+                'vanished', 'disappeared', 'missing', 'gone', 'lost',
+                'never found', 'no trace', 'without trace', 'last seen',
+                'search', 'searched', 'searching', 'rescue', 'hunt',
+                
+                # Transportation
+                'flight', 'plane', 'aircraft', 'ship', 'vessel', 'boat',
+                'yacht', 'submarine', 'helicopter', 'pilot', 'crew',
+                'passengers', 'mh370', 'mh 370', 'flight 19', 'amelia earhart',
+                
+                # People
+                'hiker', 'hikers', 'climber', 'explorer', 'adventurer',
+                'tourist', 'traveler', 'student', 'teenager', 'child',
+                'woman', 'man', 'person', 'people', 'family', 'group',
+                
+                # Locations
+                'national park', 'wilderness', 'forest', 'mountain',
+                'desert', 'ocean', 'sea', 'bermuda triangle', 'alaska',
+                
+                # Specific cases
+                'dyatlov pass', 'roanoke', 'mary celeste', 'db cooper',
+                'd.b. cooper', 'maura murray', 'brian shaffer', 'asha degree',
+                'brandon swanson', 'brandon lawson', 'leah roberts'
+            ],
+            'forbidden': [
+                'found alive', 'returned', 'came back', 'survived',
+                'hoax', 'faked disappearance', 'staged'
+            ]
+        }
+    }
+    
+    # Get validator for this category
+    if mystery_type not in category_keywords:
+        # Category not in filter list - allow all trending topics
+        print(f"   ℹ️ No category filter for '{mystery_type}' - using all trending topics")
+        return trends
+    
+    validator = category_keywords[mystery_type]
+    required_keywords = validator['required']
+    forbidden_keywords = validator.get('forbidden', [])
+    
+    # Filter trending topics
+    filtered_topics = []
+    filtered_full_data = []
+    
+    full_data = trends.get('full_data', [])
+    
+    for idx, topic_title in enumerate(trends.get('topics', [])):
+        topic_lower = topic_title.lower()
+        
+        # Get full topic data if available
+        topic_data = None
+        if idx < len(full_data):
+            topic_data = full_data[idx]
+            # Also check story_hook and core_mystery for keywords
+            story_hook = topic_data.get('story_hook', '').lower()
+            core_mystery = topic_data.get('core_mystery', '').lower()
+            combined_text = f"{topic_lower} {story_hook} {core_mystery}"
+        else:
+            combined_text = topic_lower
+        
+        # Check forbidden keywords first (instant disqualification)
+        has_forbidden = any(keyword in combined_text for keyword in forbidden_keywords)
+        if has_forbidden:
+            forbidden_found = [kw for kw in forbidden_keywords if kw in combined_text]
+            print(f"   ❌ FILTERED OUT: '{topic_title[:60]}'")
+            print(f"      Reason: Contains forbidden keywords: {forbidden_found[:3]}")
+            continue
+        
+        # Check required keywords
+        has_required = any(keyword in combined_text for keyword in required_keywords)
+        
+        if has_required:
+            matched_keywords = [kw for kw in required_keywords if kw in combined_text]
+            print(f"   ✅ MATCHED: '{topic_title[:60]}'")
+            print(f"      Keywords: {matched_keywords[:3]}")
+            
+            filtered_topics.append(topic_title)
+            if topic_data:
+                filtered_full_data.append(topic_data)
+        else:
+            print(f"   ⚠️ FILTERED OUT: '{topic_title[:60]}'")
+            print(f"      Reason: No required keywords for '{mystery_type}'")
+    
+    # Return filtered data or None
+    if filtered_topics:
+        filtered_trends = {
+            'topics': filtered_topics,
+            'full_data': filtered_full_data,
+            'source': f"{trends.get('source', 'unknown')} (filtered for {mystery_type})",
+            'generated_at': trends.get('generated_at'),
+            'timestamp': trends.get('timestamp'),
+            'niche': trends.get('niche'),
+            'channel': trends.get('channel'),
+            'version': f"{trends.get('version', 'unknown')}_category_filtered"
+        }
+        
+        print(f"\n   ✅ CATEGORY FILTER RESULT:")
+        print(f"      Original topics: {len(trends.get('topics', []))}")
+        print(f"      Matched topics: {len(filtered_topics)}")
+        print(f"      Category: {mystery_type}")
+        
+        return filtered_trends
+    else:
+        print(f"\n   ⚠️ NO TRENDING TOPICS MATCH CATEGORY '{mystery_type}'")
+        print(f"      Will use pure category generation (ignore trending)")
+        return None
 
 def load_schedule():
     """Load posting schedule to determine category for today"""
@@ -288,17 +601,18 @@ def generate_end_hook(mystery_type):
         ],
     }
     
-    # Category promise templates (2 seconds, 5 words max)
-    # These MUST match posting_schedule.json days
+    # Category promise templates (v6.0.9 - Subscribe CTA with "more" benefit)
+    # Format: "Subscribe for more [category] every [day]."
+    # Total: ~8-9 words, 4 seconds
     category_promises = {
-        'dark_history': "Dark history every Monday.",
-        'disturbing_medical': "Medical mysteries every Wednesday.",
-        'dark_experiments': "Secret research every Thursday.",
-        'disappearance': "Unsolved cases every Tuesday.",  # Also Friday, but Tuesday is primary
-        'phenomena': "Strange phenomena every Sunday.",
-        'crime': "True crime every Saturday.",
-        'conspiracy': "Cover-ups every week.",
-        'historical': "Dark history every Monday.",  # Merged into dark_history
+        'dark_history': "Subscribe for more dark history every Monday.",
+        'disturbing_medical': "Subscribe for more medical mysteries every Wednesday.",
+        'dark_experiments': "Subscribe for more secret research every Thursday.",
+        'disappearance': "Subscribe for more unsolved cases every Tuesday.",
+        'phenomena': "Subscribe for more phenomena every Sunday.",
+        'crime': "Subscribe for more true crime every Saturday.",
+        'conspiracy': "Subscribe for more mysteries every week.",
+        'historical': "Subscribe for more dark history every Monday.",
     }
     
     # Select random mystery ending for variety
@@ -386,34 +700,352 @@ def validate_script_structure(script_text):
         print(f"   ✅ Twist phrase: YES ({matching_phrases[0]})")
     
     # ✅ CHECK 3: CHRONOLOGICAL BACKSTORY DETECTION (Leah Roberts killer)
+    # v6.0.8 UPDATE: Reduced false positives, check only first 50 words
     backstory_indicators = [
-        'was born', 'grew up', 'was a student', 'worked as', 
-        'lived in', 'was known for', 'had been', 'had always',
-        'at the age of', 'years old', 'graduated from', 'studied at',
-        'was traveling', 'was road-tripping', 'was driving', 'was hiking',
-        'was visiting', 'was working', 'was studying', 'was living',
-        'had been traveling', 'had been working', 'had been studying',
-        'was on a trip', 'was on a journey', 'was exploring',
-        'was heading', 'was going', 'was planning', 'was preparing',
-        'had planned', 'had decided', 'had embarked'
+        # TIER 1: Absolute backstory killers (always block in first 50)
+        'was born', 'grew up', 'was raised',
+        'was known for', 'had always', 'had always wanted',
+        'at the age of', 'years old when', 'x years old',
+        'graduated from', 'studied at', 'enrolled in',
+        
+        # TIER 2: Activity patterns (only block if in first 30 words)
+        # These are moved to separate check below
     ]
     
-    has_early_backstory = any(phrase in first_100 for phrase in backstory_indicators)
+    # Separate check for activity patterns (only in FIRST 30 words)
+    first_30 = ' '.join(words[:30]).lower()
+    activity_patterns = [
+        'was road-tripping', 'was traveling to', 'was driving to',
+        'was hiking in', 'was visiting',
+        'was on a trip to', 'was on a journey',
+        'had been traveling', 'had planned to visit',
+        'was heading to', 'was going to'
+    ]
+    
+    # Check Tier 1 backstory in first 50 words (was first 100)
+    has_early_backstory = any(phrase in first_50 for phrase in backstory_indicators)
+    
+    # Check activity patterns only in first 30 words
+    has_activity_opening = any(phrase in first_30 for phrase in activity_patterns)
     
     if has_early_backstory:
-        backstory_found = [phrase for phrase in backstory_indicators if phrase in first_100]
-        print(f"   ❌ BLOCKED: Chronological backstory in first 100 words")
+        backstory_found = [phrase for phrase in backstory_indicators if phrase in first_50]
+        print(f"   ❌ BLOCKED: Chronological backstory in first 50 words")
         print(f"   💡 Found: {backstory_found}")
         raise ValueError(
-            "Script REJECTED: Uses chronological backstory in first 100 words. "
-            "This causes 0:09 retention drop. Start with OUTCOME, not activity."
+            "Script REJECTED: Uses chronological backstory in first 50 words. "
+            "This causes 0:09 retention drop. Start with OUTCOME, not biography."
+        )
+    
+    if has_activity_opening:
+        activity_found = [phrase for phrase in activity_patterns if phrase in first_30]
+        print(f"   ❌ BLOCKED: Activity-based opening in first 30 words")
+        print(f"   💡 Found: {activity_found}")
+        raise ValueError(
+            "Script REJECTED: Starts with activity description in first 30 words. "
+            "Start with MYSTERY REVEAL, then add context. (Leah Roberts pattern)"
         )
     
     print("   ✅ No early backstory: YES (0:09 cliff avoided)")
+    print("   ✅ No activity opening: YES (mystery-first confirmed)")
     
     print("   ✅ STRUCTURAL VALIDATION PASSED\n")
     return True
 
+def validate_category_topic_alignment(data, mystery_type):
+    """
+    🆕 v6.0.9: Validate that script topic matches mystery category
+    
+    Prevents off-topic scripts (e.g., Tunguska Event for medical category)
+    
+    Args:
+        data: Script data dict
+        mystery_type: Expected category
+    
+    Raises:
+        ValueError: If topic doesn't match category
+    
+    Returns:
+        True if validation passes
+    """
+    
+    title = data.get("title", "").lower()
+    script = data.get("script", "").lower()
+    hook = data.get("hook", "").lower()
+    combined_text = f"{title} {hook} {script}"
+    
+    print(f"\n🔍 CATEGORY-TOPIC ALIGNMENT VALIDATION:")
+    print(f"   Expected category: {mystery_type}")
+    print(f"   Title: {data.get('title', 'N/A')[:70]}")
+    
+    # ========================================================================
+    # CATEGORY VALIDATORS (same keywords as filter, expanded)
+    # ========================================================================
+    category_validators = {
+        'disturbing_medical': {
+            'required_keywords': [
+                # Medical conditions
+                'disease', 'illness', 'syndrome', 'condition', 'disorder',
+                'epidemic', 'outbreak', 'pandemic', 'infection', 'contagion',
+                
+                # Symptoms
+                'fatal', 'insomnia', 'paralysis', 'paralyzed', 'blind', 'blindness',
+                'deaf', 'mute', 'laughing', 'crying', 'shaking', 'tremors',
+                'seizures', 'convulsions', 'coma', 'unconscious',
+                
+                # Body horror
+                'turned to stone', 'petrified', 'ossification', 'fop',
+                "couldn't sleep", "couldn't wake", "never slept", "never woke",
+                'glowing', 'radium', 'radiation poisoning',
+                
+                # Medical terms
+                'medical', 'hospital', 'doctor', 'physician', 'patient',
+                'diagnosis', 'treatment', 'cure', 'therapy', 'symptoms',
+                'prognosis', 'autopsy', 'pathology', 'virus', 'bacteria',
+                
+                # Specific conditions
+                'kuru', 'fatal familial insomnia', 'ffi', 'fibrodysplasia',
+                'minamata', 'dancing plague', 'encephalitis lethargica',
+                'sleeping sickness', 'ergotism', 'tanganyika', 'mass hysteria'
+            ],
+            'forbidden_keywords': [
+                'explosion', 'blast', 'detonation', 'meteor', 'asteroid', 'comet',
+                'earthquake', 'tsunami', 'volcano', 'eruption', 'natural disaster',
+                'war', 'battle', 'combat', 'military operation', 'bombing',
+                'plane crash', 'aircraft', 'flight disappeared', 'ship sank',
+                'treasure', 'gold', 'riches', 'artifact', 'manuscript',
+                'code', 'cipher', 'cryptic message', 'signal from space'
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT a medical mystery.\n"
+                "   Disturbing medical mysteries MUST involve:\n"
+                "   - Diseases, conditions, syndromes, or health phenomena\n"
+                "   - Medical anomalies or unexplained symptoms\n"
+                "   - Body horror elements with medical basis\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}\n"
+                "\n"
+                "   ✅ CORRECT EXAMPLES:\n"
+                "      • 'The Man Who Never Slept: Fatal Insomnia Mystery'\n"
+                "      • 'The Girls Who Glowed: Radium Poisoning Case'\n"
+                "      • 'The Town That Went Blind: Minamata Disease'\n"
+                "\n"
+                "   ❌ WRONG (what you generated):\n"
+                "      • Space disasters (Tunguska Event)\n"
+                "      • Natural disasters (earthquakes, meteors)\n"
+                "      • Historical events without medical aspect"
+            )
+        },
+        
+        'dark_experiments': {
+            'required_keywords': [
+                'experiment', 'study', 'research', 'test', 'trial',
+                'project', 'program', 'operation', 'investigation',
+                'cia', 'fbi', 'kgb', 'soviet', 'government', 'military',
+                'classified', 'secret', 'hidden', 'covered up', 'coverup',
+                'mk-ultra', 'mkultra', 'artichoke', 'stanford prison',
+                'milgram', 'tuskegee', 'unit 731', 'edgewood',
+                'subjects', 'participants', 'tested', 'exposed',
+                'psychological', 'mind control', 'brainwashing', 'torture',
+                'sleep deprivation', 'sensory deprivation', 'conditioning'
+            ],
+            'forbidden_keywords': [
+                'meteor', 'asteroid', 'space object', 'cosmic event',
+                'natural disaster', 'earthquake', 'tsunami', 'volcano',
+                'ship sinking', 'plane crash', 'flight vanished',
+                'treasure hunt', 'lost gold', 'buried riches',
+                'disease outbreak' # (unless caused by experiment)
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT a dark experiment.\n"
+                "   Dark experiments MUST involve:\n"
+                "   - Human/psychological research or testing\n"
+                "   - Government/military classified programs\n"
+                "   - Unethical scientific studies\n"
+                "   - Secret research with mysterious outcomes\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}\n"
+                "\n"
+                "   ✅ CORRECT EXAMPLES:\n"
+                "      • 'The Sleep Study That Failed: Russian Experiment'\n"
+                "      • 'The CIA Project That Erased Memories: MK-Ultra'\n"
+                "      • 'The Prison Experiment Gone Wrong: Stanford 1971'\n"
+                "\n"
+                "   ❌ WRONG (what you generated):\n"
+                "      • Space events (Tunguska, meteors)\n"
+                "      • Natural phenomena\n"
+                "      • Historical events without experimental aspect"
+            )
+        },
+        
+        'dark_history': {
+            'required_keywords': [
+                # Time markers
+                '1400', '1500', '1600', '1700', '1800', '1900',
+                'century', 'historical', 'history', 'ancient', 'era', 'period',
+                
+                # Places
+                'town', 'village', 'city', 'colony', 'settlement',
+                
+                # Events
+                'event', 'incident', 'occurrence', 'phenomenon',
+                'dark day', 'sky turned', 'rained', 'dancing plague',
+                'radium girls', 'glowing', 'mass hysteria', 'mysterious deaths',
+                
+                # People groups
+                'people who', 'villagers', 'workers', 'settlers', 'colonists'
+            ],
+            'forbidden_keywords': [
+                'modern experiment', '2000s', '2010s', '2020s',
+                'recent years', 'this decade', 'current events',
+                'space signal', 'satellite', 'internet mystery',
+                'social media', 'reddit mystery', 'youtube mystery'
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT a dark history mystery.\n"
+                "   Dark history MUST involve:\n"
+                "   - Historical events (pre-2000) with mysterious elements\n"
+                "   - Unexplained occurrences from the past\n"
+                "   - Dark/disturbing historical phenomena\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}\n"
+                "\n"
+                "   ✅ CORRECT EXAMPLES:\n"
+                "      • 'The Town That Couldn't Stop Dancing: 1518 Plague'\n"
+                "      • 'The Day It Rained Meat: 1876 Kentucky Mystery'\n"
+                "      • 'The Girls Who Glowed: Radium Factory 1917'\n"
+                "\n"
+                "   ❌ WRONG (what you generated):\n"
+                "      • Modern events (post-2000)\n"
+                "      • Space mysteries without historical context\n"
+                "      • Internet/digital age mysteries"
+            )
+        },
+        
+        'phenomena': {
+            'required_keywords': [
+                'phenomenon', 'phenomena', 'anomaly', 'unexplained',
+                'signal', 'lights', 'sound', 'hum', 'broadcast',
+                'wow signal', 'hessdalen', 'marfa lights', 'bloop',
+                'ufo', 'uap', 'sighting', 'ghost', 'haunting',
+                'paranormal', 'supernatural', 'portal', 'vortex',
+                'appeared', 'materialized', 'spontaneous'
+            ],
+            'forbidden_keywords': [
+                'murder', 'killed', 'crime scene', 'investigation',
+                'medical condition', 'disease', 'syndrome',
+                'experiment conducted', 'study performed', 'research project'
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT an unexplained phenomenon.\n"
+                "   Phenomena MUST involve:\n"
+                "   - Unexplained events or paranormal activity\n"
+                "   - Mysterious signals, lights, or sounds\n"
+                "   - Supernatural or impossible occurrences\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}"
+            )
+        },
+        
+        'crime': {
+            'required_keywords': [
+                'murder', 'killed', 'murdered', 'slain', 'death',
+                'crime', 'cold case', 'unsolved', 'investigation',
+                'detective', 'police', 'forensic', 'evidence',
+                'victim', 'killer', 'suspect', 'zodiac', 'ripper',
+                'true crime', 'who killed', 'body found'
+            ],
+            'forbidden_keywords': [
+                'meteor', 'asteroid', 'space', 'cosmic',
+                'natural disaster', 'medical condition',
+                'paranormal', 'signal', 'phenomenon'
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT a true crime mystery.\n"
+                "   True crime MUST involve:\n"
+                "   - Murders or unsolved deaths\n"
+                "   - Criminal investigations\n"
+                "   - Cold cases\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}"
+            )
+        },
+        
+        'disappearance': {
+            'required_keywords': [
+                'vanished', 'disappeared', 'missing', 'gone', 'lost',
+                'never found', 'no trace', 'last seen', 'search',
+                'flight', 'ship', 'hiker', 'person', 'crew',
+                'mh370', 'flight 19', 'amelia earhart', 'db cooper',
+                'dyatlov pass', 'roanoke', 'mary celeste'
+            ],
+            'forbidden_keywords': [
+                'found alive', 'returned', 'came back', 'hoax'
+            ],
+            'error_message': (
+                "❌ CATEGORY MISMATCH: This topic is NOT a disappearance mystery.\n"
+                "   Disappearances MUST involve:\n"
+                "   - People, vehicles, or groups that vanished\n"
+                "   - Unexplained absences\n"
+                "   - Missing persons cases\n"
+                "\n"
+                "   This topic appears to be about: {detected_topic}"
+            )
+        }
+    }
+    
+    # Skip validation if category not in validators
+    if mystery_type not in category_validators:
+        print(f"   ℹ️ No validator for '{mystery_type}' - skipping alignment check")
+        return True
+    
+    validator = category_validators[mystery_type]
+    required = validator['required_keywords']
+    forbidden = validator.get('forbidden_keywords', [])
+    
+    # Check required keywords
+    matching_required = [kw for kw in required if kw in combined_text]
+    has_required = len(matching_required) > 0
+    
+    # Check forbidden keywords
+    matching_forbidden = [kw for kw in forbidden if kw in combined_text]
+    has_forbidden = len(matching_forbidden) > 0
+    
+    # Detect topic type for error message
+    detected_topic = "unknown topic"
+    if 'explosion' in combined_text or 'blast' in combined_text:
+        detected_topic = "space/natural disaster"
+    elif 'meteor' in combined_text or 'asteroid' in combined_text:
+        detected_topic = "cosmic event"
+    elif 'ship' in combined_text and 'sank' in combined_text:
+        detected_topic = "maritime disaster"
+    elif 'plane' in combined_text or 'flight' in combined_text:
+        detected_topic = "aviation incident"
+    elif 'war' in combined_text or 'battle' in combined_text:
+        detected_topic = "military history"
+    elif 'treasure' in combined_text or 'gold' in combined_text:
+        detected_topic = "treasure hunt/artifact mystery"
+    elif 'code' in combined_text or 'cipher' in combined_text:
+        detected_topic = "cryptography/code mystery"
+    
+    # Validation logic
+    if has_forbidden:
+        print(f"   ❌ FORBIDDEN KEYWORDS DETECTED: {matching_forbidden[:3]}")
+        raise ValueError(
+            validator['error_message'].format(detected_topic=detected_topic)
+        )
+    
+    if not has_required:
+        print(f"   ❌ NO REQUIRED KEYWORDS FOUND")
+        print(f"      Required (any of): {required[:10]}...")
+        raise ValueError(
+            validator['error_message'].format(detected_topic=detected_topic)
+        )
+    
+    print(f"   ✅ Category-topic alignment: VALID")
+    print(f"      Matched keywords: {matching_required[:3]}")
+    
+    return True
 
 def validate_script_data(data):
     """✅ v6.0: Word count + structural + end hook validation"""
@@ -462,9 +1094,33 @@ def validate_script_data(data):
         print(f"⚠️ Title too long ({len(data['title'])} chars), truncating...")
         data["title"] = data["title"][:97] + "..."
     
-    # ✅ Hook validation
+    # ✅ Hook validation (v6.0.8 - expanded for dark content categories)
     hook_text = data.get("hook", "")
-    power_words = ['vanished', 'disappeared', 'found', 'discovered', 'mystery', 'never', 'impossible', 'died', 'killed', 'glowed', 'turned']
+    power_words = [
+        # Core mystery words (disappearances)
+        'vanished', 'disappeared', 'found', 'discovered', 'missing', 'gone',
+        
+        # Dark outcomes
+        'died', 'killed', 'dead', 'death', 'murdered',
+        
+        # Mystery intensifiers
+        'mystery', 'never', 'impossible', 'unexplained', 'unknown',
+        
+        # Dark history specific
+        'glowed', 'turned', 'rained', 'burning', 'screaming', 'dancing',
+        "couldn't stop", "can't explain", 'buried', 'frozen', 'petrified',
+        
+        # Medical mysteries
+        "couldn't sleep", "couldn't wake", "turned to stone", 'paralyzed',
+        'blind', 'deaf', 'mute', 'laughing', 'crying', 'shaking',
+        
+        # Experiments
+        'classified', 'secret', 'hidden', 'covered up', 'experiments',
+        'subjects', 'tested', 'exposed',
+        
+        # Phenomena
+        'appeared', 'vanished', 'signal', 'lights', 'sounds', 'voices'
+    ]
     has_power_word = any(word in hook_text.lower() for word in power_words)
     
     if not has_power_word:
@@ -473,12 +1129,63 @@ def validate_script_data(data):
     
     print(f"   ✅ Hook power words: YES")
     
-    # Title pattern check
+    # ✅ Title specificity validation (v6.0.9 - prevent generic 0-view titles)
     title_text = data.get("title", "")
+    
+    # Generic patterns that need subtitles for specificity
+    generic_patterns = [
+        (r'^The Man Who\s+\w+(?!.*:)', "The Man Who [X]"),
+        (r'^The Woman Who\s+\w+(?!.*:)', "The Woman Who [X]"),
+        (r'^The Person Who\s+\w+(?!.*:)', "The Person Who [X]"),
+        (r'^The People Who\s+\w+(?!.*:)', "The People Who [X]"),
+        (r'^The Girl Who\s+\w+(?!.*:)', "The Girl Who [X]"),
+        (r'^The Boy Who\s+\w+(?!.*:)', "The Boy Who [X]"),
+        (r'^The Condition That\s+\w+(?!.*:)', "The Condition That [X]"),
+        (r'^The Disease That\s+\w+(?!.*:)', "The Disease That [X]"),
+        (r'^The Experiment That\s+\w+(?!.*:)', "The Experiment That [X]"),
+    ]
+    
+    # Check if title matches generic pattern without subtitle
+    is_too_generic = False
+    matched_pattern = None
+    
+    for pattern, pattern_name in generic_patterns:
+        if re.search(pattern, title_text):
+            is_too_generic = True
+            matched_pattern = pattern_name
+            break
+    
+    # Exception: Allow if title has subtitle (contains colon)
+    if is_too_generic and ':' not in title_text:
+        print(f"   ❌ BLOCKED: Title too generic without subtitle")
+        print(f"   💡 Pattern: {matched_pattern}")
+        raise ValueError(
+            f"Title too generic: '{title_text}'. "
+            f"Generic pattern '{matched_pattern}' requires subtitle for specificity. "
+            "Add location/name/detail after colon. "
+            "Examples:\n"
+            "  ✅ 'The Man Who Couldn't Sleep: Fatal Insomnia Case'\n"
+            "  ✅ 'The Experiment That Failed: MK-Ultra Files'\n"
+            "  ✅ 'The Town That Vanished: Roanoke Mystery'\n"
+            "  ❌ 'The Man Who Couldn't Sleep' (too generic)"
+        )
+    
+    if is_too_generic and ':' in title_text:
+        print(f"   ✅ Title specificity: YES (subtitle adds context)")
+    elif not is_too_generic:
+        print(f"   ✅ Title specificity: YES (specific enough)")
+    
+    # Title pattern check
     if title_text.startswith("The ") and any(word in title_text.lower() for word in ['vanished', 'disappeared', 'glowed', 'turned', 'died']):
         print(f"   ✅ Title follows proven pattern: 'The [X] Who/That [Y]'")
+    
+    # 🆕 v6.0.9: Category-topic alignment validation
+    # Get mystery_type from data (set during generation)
+    mystery_type = data.get('mystery_category', 'unknown')
+    if mystery_type != 'unknown':
+        validate_category_topic_alignment(data, mystery_type)
 
-    print(f"✅ Script validation PASSED (v6.0)\n")
+    print(f"✅ Script validation PASSED (v6.0.9)\n")
     return True
 
 
@@ -617,72 +1324,174 @@ DISAPPEARANCE MYSTERIES (59.3% RETENTION - PROVEN STRENGTH):
 """,
         
         'dark_history': f"""
-🆕 DARK HISTORY (65-75% ESTIMATED RETENTION - NEW CATEGORY):
-- Focus: Real historical events with disturbing/mysterious elements
-- Hook formula: "In [Year], [horrifying event]. [Victims]. [Impossible outcome]."
-- Key elements: Verified history, mysterious circumstances, dark/tragic outcome
-- Examples: "The Day It Rained Meat", "The Girls Who Glowed", "The Town That Burned For 60 Years"
-- Tone: MYSTERIOUS FILM NOIR, NOT educational lecture
-- AVOID: War crimes details, graphic violence descriptions, child harm specifics
-- ALLOW: Dark facts, mysterious deaths, tragic events (focus on MYSTERY not gore)
-- MANDATORY: Use "The [Event] That [Outcome]" or "The [People] Who [Fate]" title format
-- SCRIPT LENGTH: {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} words (end hook auto-added)
+🆕 DARK HISTORY (65-75% TARGET RETENTION - MYSTERY-FIRST APPROACH):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 CRITICAL: This is a MYSTERY category, NOT a history lesson!
+Focus on the IMPOSSIBLE/UNEXPLAINED elements, NOT historical context.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-GOOD EXAMPLES:
-✅ "The Girls Who Glowed In The Dark" (Radium Girls - mysterious illness)
-✅ "The Town That's Been Burning For 60 Years" (Centralia - unexplained fire)
-✅ "The Day The Sky Turned Black At Noon" (1780 Dark Day - meteorological mystery)
+CORE CONCEPT:
+- Historical events where something IMPOSSIBLE/UNEXPLAINED happened
+- Emphasis: MYSTERY first, history second
+- Tone: Film noir thriller investigating a historical anomaly
+- NOT: History Channel documentary about past events
 
-BAD EXAMPLES (TOO GRAPHIC):
-❌ "The Brutal Torture Methods of Unit 731" (graphic violence)
-❌ "The Children Who Were Experimented On" (child harm focus)
-❌ "The Most Gruesome Executions in History" (gore focus)
+MANDATORY OPENING STRUCTURE:
+Formula: "In [Year], [IMPOSSIBLE EVENT happened]. [Witnesses]. [No explanation]."
+
+✅ CORRECT EXAMPLES:
+"1780. The sky turned black at noon. No eclipse. No explanation."
+"1876. It rained meat from the sky. Kentucky. Chunks of flesh."
+"1917. Girls started glowing in the dark. Their bones too."
+
+❌ WRONG EXAMPLES (Historical narrative):
+"In 1780, New Englanders were going about their daily lives when..." ❌
+"The Radium Girls were factory workers who painted watch dials..." ❌
+"During the 18th century, a mysterious event occurred..." ❌
+
+STRUCTURE BREAKDOWN:
+
+🎬 FIRST 15 WORDS (0-5 seconds):
+THE IMPOSSIBLE EVENT - Start with what DEFIES EXPLANATION
+"[Year]. [Impossible thing happened]. [Location/witnesses]. [Mystery word]."
+MUST include mystery power words: vanished/glowed/turned/rained/died/appeared
+
+🎬 WORDS 16-45 (5-20 seconds):
+WHO/WHERE/WHEN context (NOW you can add historical details)
+"[Historical group]. [Their activity]. [What they noticed]."
+This is where historical context belongs - AFTER the mystery hook.
+
+🎬 WORDS 46-75 (20-35 seconds):
+THE TWIST - What made it IMPOSSIBLE/UNEXPLAINED
+"But here's the impossible part. [Contradiction]. [Evidence that makes no sense]."
+
+🎬 WORDS 76-94 (35-45 seconds):
+UNRESOLVED MYSTERY - Dark outcome, no answers
+"[Deaths/disappearances]. [Investigations failed]. [Mystery remains]."
+
+EXAMPLES OF CORRECT MYSTERY-FIRST STRUCTURE:
+
+✅ EXAMPLE 1: "The Day It Rained Meat"
+First 15 words: "1876. Meat rained from the sky. Kentucky. Chunks of flesh."
+Next 30 words: "Farmers watched. Pieces falling. Some the size of fists. Lab tests confirmed. Lung tissue. Muscle. From something."
+Twist: "But here's the impossible part. No birds overhead. Clear skies. No aircraft existed yet."
+Resolution: "Samples analyzed. Origin unknown. No explanation. Still unsolved."
+
+✅ EXAMPLE 2: "The Girls Who Glowed"
+First 15 words: "1917. Factory workers started glowing in the dark. Their hair. Skin. Breath."
+Next 30 words: "The Radium Girls painted watch dials. Radium paint. Managers said it was safe. Told them to lick brushes."
+Twist: "But here's the disturbing part. Their jaws started crumbling. Bones disintegrating. Anemia. Tumors."
+Resolution: "Five died before the trial ended. Bodies so radioactive they glowed in coffins."
+
+FORBIDDEN PATTERNS (CAUSE 36% RETENTION):
+❌ "In [year], [people] were [activity]..." (Historical setup)
+❌ "The [group] were [profession] who..." (Biographical intro)
+❌ "During the [time period], [background]..." (Chronological narrative)
+❌ Starting with person's background before the mystery
+❌ Educational history documentary tone
+
+MANDATORY REQUIREMENTS:
+✅ First 15 words = THE IMPOSSIBLE EVENT (not background)
+✅ Mystery power word in first 15 words (glowed/rained/turned/vanished/died)
+✅ "But here's the [adjective] part" twist phrase
+✅ Film noir mystery tone (NOT educational)
+✅ Focus on UNEXPLAINED aspects throughout
+✅ {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} words total
+
+CONTENT GUIDELINES:
+✅ ALLOW: Mysterious deaths, dark historical events, unexplained phenomena
+✅ ALLOW: Medical mysteries, strange events, impossible occurrences
+❌ AVOID: War crimes, graphic torture, child harm details, gore descriptions
+❌ AVOID: Nazi experiments (too sensitive)
+❌ AVOID: Graphic violence (focus on mystery, not brutality)
+
+TOPIC SELECTION:
+Focus on events with MYSTERIOUS elements:
+- Unexplained natural phenomena (Dark Day, meat rain, strange lights)
+- Medical mysteries with historical context (Radium Girls, Dancing Plague)
+- Disappearances/deaths with impossible circumstances
+- Events that defy scientific explanation
+
+TITLE FORMATS:
+"The [Event] That [Impossible Outcome]" - "The Day It Rained Meat"
+"The [People] Who [Mysterious Fate]" - "The Girls Who Glowed In The Dark"
+"The [Thing] That [Defied Explanation]" - "The Town That's Been Burning For 60 Years"
+
+🚨 YOUR SCRIPT WILL BE REJECTED IF:
+1. First 15 words don't contain impossible/mystery element
+2. Starts with biographical/historical background
+3. Uses educational documentary tone
+4. Lacks "But..." twist phrase
+5. Word count outside {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX}
+
+REMEMBER: You're writing a MYSTERY that happens to be historical, NOT a history lesson that happens to be mysterious.
+The viewer should feel intrigue and impossibility, NOT like they're learning facts.
 """,
         
         'disturbing_medical': f"""
-🆕 DISTURBING MEDICAL MYSTERIES (70-80% ESTIMATED RETENTION - NEW CATEGORY):
+🆕 DISTURBING MEDICAL MYSTERIES (70-80% TARGET RETENTION - NEW CATEGORY):
 - Focus: Real medical conditions that defy explanation or horrify
 - Hook formula: "[Person/Group] started [symptom]. Doctors couldn't explain it. [Outcome]."
 - Key elements: Verified medical case, baffling symptoms, mysterious cause, dark outcome
-- Examples: "The Man Who Couldn't Sleep", "The Condition That Turns You To Stone", "The Town Where Everyone Went Blind"
+
+🚨 TITLE REQUIREMENTS (CRITICAL - PREVENTS 0-VIEW ALGORITHM REJECTION):
+- MUST include subtitle after colon for specificity
+- MUST include: Condition name OR location OR specific case identifier
+- Generic titles get 0 views from algorithm
+
+✅ CORRECT EXAMPLES (High CTR):
+"The Man Who Never Slept: Fatal Insomnia Mystery"
+"The Girl Who Turned To Stone: The FOP Case"
+"The Town That Went Blind: Minamata Disease Outbreak"
+"The Condition That Prevents Sleep: FFI Mystery"
+
+❌ WRONG EXAMPLES (0 views - too generic):
+"The Man Who Couldn't Sleep" (no subtitle = algorithm rejection)
+"The Condition That Turns You To Stone" (no specificity)
+"The People Who Started Laughing" (no location/name)
+
+SUBTITLE MUST ADD:
+- Medical condition name (Fatal Insomnia, FOP, Kuru)
+- OR location (Minamata, Pont-Saint-Esprit, Tanganyika)
+- OR specific identifier (The 1518 Case, The Mystery Disease)
+
 - Tone: BODY HORROR MYSTERY, NOT clinical textbook
 - AVOID: Graphic surgical descriptions, gore, self-harm methods, eating disorder glorification
 - ALLOW: Mysterious symptoms, baffling conditions, medical anomalies (focus on MYSTERY)
-- MANDATORY: Use "The [Person/People] Who [Medical Anomaly]" or "The Condition That [Effect]"
 - SCRIPT LENGTH: {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} words (end hook auto-added)
-
-GOOD EXAMPLES:
-✅ "The Man Who Couldn't Die" (Fatal Familial Insomnia - mysterious no-sleep condition)
-✅ "The Girls Who Turned To Stone" (FOP - mysterious bone growth)
-✅ "The Laughing Death That Spread Through Villages" (Kuru - mysterious prion disease)
-
-BAD EXAMPLES (TOO GRAPHIC/SENSITIVE):
-❌ "The Man Who Cut Off His Own Limbs" (self-harm focus)
-❌ "The Girl Who Starved Herself To Death" (eating disorder)
-❌ "The Surgery That Went Horribly Wrong" (graphic medical)
 """,
         
         'dark_experiments': f"""
-🆕 DARK EXPERIMENTS (68-75% ESTIMATED RETENTION - NEW CATEGORY):
+🆕 DARK EXPERIMENTS (68-75% TARGET RETENTION - NEW CATEGORY):
 - Focus: Real unethical/secret experiments with mysterious or horrifying outcomes
 - Hook formula: "In [Year], [organization] conducted [experiment]. [Subjects]. [Result]."
 - Key elements: Declassified files, secret research, ethical violations, mysterious outcomes
-- Examples: "MK-Ultra's Lost Subjects", "The Sleep Deprivation Experiment", "The Prison Experiment Gone Wrong"
+
+🚨 TITLE REQUIREMENTS (CRITICAL - PREVENTS 0-VIEW ALGORITHM REJECTION):
+- MUST include subtitle after colon for specificity
+- MUST include: Experiment name OR organization OR project code
+- Generic titles get 0 views from algorithm
+
+✅ CORRECT EXAMPLES (High CTR):
+"The Experiment That Made People Vanish: MK-Ultra Files"
+"The Sleep Study That Failed: Russian Experiment"
+"The Prison Experiment Gone Wrong: Stanford 1971"
+"The Secret Research They Buried: Project Artichoke"
+
+❌ WRONG EXAMPLES (0 views - too generic):
+"The Secret Study That Made People Vanish" (no specificity)
+"The Experiment They Had To Shut Down" (no name)
+"The Research That Went Wrong" (no organization)
+
+SUBTITLE MUST ADD:
+- Experiment name (MK-Ultra, Stanford Prison, Tuskegee)
+- OR organization (CIA, Soviet, Unit 731)
+- OR project code (Artichoke, Midnight Climax, Bluebird)
+
 - Tone: CONSPIRACY THRILLER FILM NOIR, NOT documentary
 - AVOID: Nazi experiments (too sensitive/banned), torture details, animal cruelty specifics
 - ALLOW: CIA experiments, psychological studies, unethical research (focus on MYSTERY/COVER-UP)
-- MANDATORY: Use "The [Experiment] That [Outcome]" or "The Secret Study [Organization] Buried"
 - SCRIPT LENGTH: {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} words (end hook auto-added)
-
-GOOD EXAMPLES:
-✅ "The CIA Experiment That Erased Memories" (MK-Ultra - mysterious mind control)
-✅ "The Sleep Study Where No One Woke Up" (Russian Sleep Experiment - urban legend/mystery)
-✅ "The Prison Experiment They Had To Shut Down" (Stanford - psychological mystery)
-
-BAD EXAMPLES (TOO SENSITIVE):
-❌ "The Nazi Experiments on Twins" (Holocaust - banned content)
-❌ "The Torture Methods CIA Used" (graphic torture focus)
-❌ "The Animals That Suffered In Labs" (animal cruelty)
 """,
         
         'crime': f"""
@@ -1029,14 +1838,14 @@ To this day, twenty-seven men and six aircraft. No evidence.""",
 
 
 def generate_mystery_script():
-    """Main script generation function (v6.0 - DARK CONTENT + END HOOKS)"""
+    """Main script generation function (v6.0.8 - ITERATIVE RETRY WITH FEEDBACK)"""
     
     content_type = os.getenv('CONTENT_TYPE', 'evening_prime')
     priority = os.getenv('PRIORITY', 'medium')
     user_mystery_type = os.getenv('MYSTERY_TYPE', 'auto')
     
     print(f"\n{'='*70}")
-    print(f"🔍 GENERATING MYTHICA REPORT SCRIPT v6.0 (DARK CONTENT + END HOOKS)")
+    print(f"🔍 GENERATING MYTHICA REPORT SCRIPT v6.0.8 (ITERATIVE RETRY)")
     print(f"{'='*70}")
     print(f"📍 Content Type: {content_type}")
     print(f"⭐ Priority: {priority}")
@@ -1055,16 +1864,86 @@ def generate_mystery_script():
     mystery_type = select_weighted_mystery_type(content_type, user_mystery_type)
     print(f"🎯 Final mystery type: {mystery_type}")
     
-    prompt = build_mystery_prompt(content_type, priority, mystery_type, trends, history)
+    # 🆕 v6.0.9: Filter trending topics by category
+    if trends:
+        print(f"\n🔍 FILTERING TRENDING TOPICS FOR CATEGORY: {mystery_type}")
+        filtered_trends = filter_trending_by_category(trends, mystery_type)
+        
+        if filtered_trends:
+            trends = filtered_trends
+            print(f"✅ Using {len(filtered_trends.get('topics', []))} category-matched trending topics")
+        else:
+            trends = None
+            print(f"⚠️ No trending topics match '{mystery_type}' - using pure category generation")
+    
+    # Build base prompt
+    base_prompt = build_mystery_prompt(content_type, priority, mystery_type, trends, history)
     
     max_attempts = 5
     attempt = 0
     data = None
+    previous_errors = []  # Track errors for iterative feedback
     
     while attempt < max_attempts:
         try:
             attempt += 1
             print(f"\n🔍 Generation attempt {attempt}/{max_attempts}...")
+            
+            # v6.0.8: Add error feedback to prompt for attempts 2+
+            if attempt > 1 and previous_errors:
+                last_error = previous_errors[-1]
+                correction_prompt = f"""
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 PREVIOUS ATTEMPT #{attempt-1} FAILED - CORRECTION REQUIRED:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ERROR: {last_error}
+
+🔧 SPECIFIC CORRECTIONS NEEDED:
+
+"""
+                if 'backstory' in last_error.lower():
+                    correction_prompt += """
+1. DO NOT start with biographical information
+2. DO NOT use "was [activity]" in first 30 words
+3. START with the IMPOSSIBLE/MYSTERIOUS event
+4. Example: "1917. Girls started glowing." NOT "The Radium Girls were factory workers who..."
+"""
+                
+                if 'word count' in last_error.lower() or 'short' in last_error.lower():
+                    correction_prompt += f"""
+1. Your script body must be {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} words
+2. Add more mystery details, evidence, witnesses
+3. Expand the twist section ("But here's the [adjective] part...")
+4. Add more specific facts and unexplained elements
+"""
+                
+                if 'power word' in last_error.lower() or 'reveal' in last_error.lower():
+                    correction_prompt += """
+1. First 15 words MUST include: vanished/disappeared/died/glowed/turned/rained
+2. Start with the OUTCOME: "In [year], [mystery happened]."
+3. NOT the setup: "In [year], [people] were [doing activity]..."
+"""
+                
+                if 'trending' in last_error.lower():
+                    correction_prompt += """
+1. You MUST use one of the provided trending topics
+2. Don't invent your own mystery
+3. Research the real case and focus on mysterious elements
+"""
+                
+                correction_prompt += f"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NOW REGENERATE THE SCRIPT WITH THESE CORRECTIONS APPLIED.
+This is attempt #{attempt} of {max_attempts}.
+"""
+                
+                prompt = base_prompt + correction_prompt
+                print(f"   🔄 Added correction feedback based on: {last_error[:100]}...")
+            else:
+                prompt = base_prompt
             
             raw_text = generate_script_with_retry(prompt)
             print(f"📝 Received response ({len(raw_text)} chars)")
@@ -1161,14 +2040,19 @@ def generate_mystery_script():
             break
             
         except json.JSONDecodeError as e:
-            print(f"❌ Attempt {attempt} failed: JSON parse error")
+            error_msg = f"JSON parse error: {str(e)}"
+            previous_errors.append(error_msg)
+            print(f"❌ Attempt {attempt} failed: {error_msg}")
             if attempt < max_attempts:
                 import time
                 time.sleep(2**attempt)
         
         except ValueError as e:
-            print(f"❌ Attempt {attempt} failed: {e}")
+            error_msg = str(e)
+            previous_errors.append(error_msg)
+            print(f"❌ Attempt {attempt} failed: {error_msg}")
             if attempt < max_attempts:
+                print(f"   🔄 Will retry with correction feedback...")
                 import time
                 time.sleep(2**attempt)
         
@@ -1179,10 +2063,61 @@ def generate_mystery_script():
                 time.sleep(2**attempt)
         
         if attempt >= max_attempts:
-            print("\n⚠️ Max attempts reached - using fallback")
-            data = get_fallback_script(content_type, mystery_type)
-            fallback_hash = get_content_hash(data)
-            save_to_history(data['topic'], fallback_hash, data['title'], data)
+            print("\n⚠️ Max attempts reached")
+            
+            # v6.0.8: Try simplified prompt for dark_history before fallback
+            if mystery_type == 'dark_history' and not any('simplified' in err for err in previous_errors):
+                print("   🔧 Attempting simplified dark_history prompt (last chance)...")
+                try:
+                    simplified_prompt = f"""Create a {SCRIPT_BODY_MIN}-{SCRIPT_BODY_MAX} word mystery script about a dark historical event.
+
+MANDATORY FIRST 15 WORDS:
+"[Year]. [Impossible event]. [Location]. [Outcome]."
+
+Example: "1780. The sky turned black at noon. New England. No eclipse."
+
+Then continue with:
+- Who witnessed it (20 words)
+- What made it impossible (30 words)  
+- The dark outcome (20 words)
+
+FORBIDDEN:
+- Starting with person's background
+- "was [activity]" before mystery reveal
+- Educational history tone
+
+Use film noir mysterious tone. Focus on the UNEXPLAINED.
+
+Output JSON with: title, topic, hook, script, cta, hashtags, description, key_phrase, mystery_category, visual_prompts
+"""
+                    
+                    previous_errors.append('simplified attempt')
+                    raw_text = generate_script_with_retry(simplified_prompt)
+                    json_text = extract_json_from_response(raw_text)
+                    data = json.loads(json_text)
+                    
+                    # Quick validation
+                    validate_script_data(data)
+                    
+                    # Add end hook
+                    end_hook = generate_end_hook(mystery_type)
+                    data["script"] = f"{data['script']}\n\n{end_hook}"
+                    
+                    # Success with simplified prompt!
+                    print("   ✅ Simplified prompt succeeded!")
+                    
+                except Exception as e:
+                    print(f"   ❌ Simplified prompt also failed: {e}")
+                    print("   📋 Using fallback script")
+                    data = get_fallback_script(content_type, mystery_type)
+                    fallback_hash = get_content_hash(data)
+                    save_to_history(data['topic'], fallback_hash, data['title'], data)
+            else:
+                # Use fallback for non-dark_history or if simplified already tried
+                print("   📋 Using fallback script")
+                data = get_fallback_script(content_type, mystery_type)
+                fallback_hash = get_content_hash(data)
+                save_to_history(data['topic'], fallback_hash, data['title'], data)
     
     # Save final script
     script_path = os.path.join(TMP, "script.json")

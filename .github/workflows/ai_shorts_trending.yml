@@ -254,17 +254,42 @@ jobs:
           fi
         continue-on-error: true
 
-      - name: 🔍 Fetch trending mystery topics (v6.0 - Entity-aware)
+      - name: 🔍 Fetch trending mystery topics (v6.0.9 - Category-Aware)
         if: steps.schedule_check.outputs.should_post == 'true'
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           CONTENT_TYPE: ${{ steps.schedule_check.outputs.content_type }}
           MYSTERY_TYPE: ${{ github.event.inputs.mystery_type }}
         run: |
-          echo "🔍 Fetching trending mystery topics..."
-          echo "🆕 v6.0: Entity-based duplicate detection active"
-          echo "🚫 Blocking: Asha Degree, Natasha Ryan, Flight 19 duplicates"
-          python .github/scripts/fetch_trending.py
+          echo "════════════════════════════════════════════════"
+          echo "🔍 FETCHING TRENDING TOPICS v6.0.9"
+          echo "════════════════════════════════════════════════"
+          echo "🆕 CATEGORY-AWARE FETCHING:"
+          echo "   • Scheduler output: ${{ steps.schedule_check.outputs.mystery_type }}"
+          echo "   • Manual override: ${{ github.event.inputs.mystery_type }}"
+          echo "   • Category-specific search terms active"
+          echo "   • Entity-based duplicate detection active"
+          echo ""
+          echo "🎯 EXPECTED IMPROVEMENTS:"
+          echo "   • Match rate: 10-30% → 60-80%"
+          echo "   • Medical gets medical trends"
+          echo "   • Experiments get CIA/government research"
+          echo "   • More targeted, relevant topics"
+          echo "════════════════════════════════════════════════"
+          
+          # Determine category: scheduler output takes precedence, fallback to manual input
+          CATEGORY="${{ steps.schedule_check.outputs.mystery_type }}"
+          if [ -z "$CATEGORY" ] || [ "$CATEGORY" = "auto" ]; then
+            CATEGORY="${{ github.event.inputs.mystery_type }}"
+          fi
+          if [ -z "$CATEGORY" ] || [ "$CATEGORY" = "auto" ]; then
+            CATEGORY="general"
+          fi
+          
+          echo "📍 Final category: $CATEGORY"
+          echo ""
+          
+          python .github/scripts/fetch_trending.py --category "$CATEGORY"
 
       - name: ✍️ Generate mystery script (v6.0 - DARK CONTENT + END HOOKS)
         if: steps.schedule_check.outputs.should_post == 'true'
