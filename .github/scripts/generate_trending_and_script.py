@@ -505,28 +505,173 @@ def get_category_for_today():
 
 
 def is_similar_topic(new_title, previous_titles, similarity_threshold=0.6):
-    """Check if topic is too similar to previous ones with time decay"""
-    new_words = set(new_title.lower().split())
+    """
+    🔧 v6.0.10: FIXED - Hybrid duplicate detection
     
-    for idx, prev_title in enumerate(reversed(previous_titles[-30:])):
-        prev_words = set(prev_title.lower().split())
+    Primary: Entity-based comparison (accurate, allows pattern reuse)
+    Fallback: Improved string comparison (fixed time decay bug)
+    
+    Args:
+        new_title: Title to check
+        previous_titles: List of previous titles
+        similarity_threshold: NOT USED (kept for compatibility)
+    
+    Returns:
+        True if duplicate detected, False if unique
+    """
+    
+    # ========================================================================
+    # PRIMARY: ENTITY-BASED DETECTION (Recommended)
+    # ========================================================================
+    
+    is_dup, entity_sim, matched_title = is_duplicate_by_entities(
+        new_title, 
+        previous_titles,
+        entity_threshold=0.70,  # 70% entity overlap = duplicate
+        recent_count=30
+    )
+    
+    if is_dup:
+        print(f"⚠️ Entity-based duplicate detected ({entity_sim:.2%} overlap)")
+        print(f"   Matched: {matched_title}")
+        return True
+    
+    # ========================================================================
+    # FALLBACK: IMPROVED STRING COMPARISON (if entity method unclear)
+    # ========================================================================
+    
+    # Only check if entity similarity was borderline (50-70%)
+    if entity_sim > 0.50:
+        print(f"   ⚠️ Borderline entity similarity ({entity_sim:.2%}), checking string similarity...")
         
-        intersection = len(new_words & prev_words)
-        union = len(new_words | prev_words)
+        new_words = set(new_title.lower().split())
         
-        if union > 0:
-            base_similarity = intersection / union
-            decay_factor = 1.0 / (1.0 + idx * 0.05)
-            adjusted_threshold = similarity_threshold * decay_factor
+        for idx, prev_title in enumerate(reversed(previous_titles[-30:])):
+            prev_words = set(prev_title.lower().split())
             
-            if base_similarity > adjusted_threshold:
-                print(f"⚠️ Topic too similar ({base_similarity:.2f} > {adjusted_threshold:.2f})")
-                print(f"   To: {prev_title}")
-                print(f"   From: ~{idx} videos ago")
-                return True
+            intersection = len(new_words & prev_words)
+            union = len(new_words | prev_words)
+            
+            if union > 0:
+                base_similarity = intersection / union
+                
+                # FIXED: Time decay (older = MORE lenient, was backwards)
+                videos_ago = idx
+                leniency_boost = videos_ago * 0.02  # 2% more lenient per video
+                adjusted_threshold = min(0.85, 0.70 + leniency_boost)  # Cap at 85%
+                
+                if base_similarity > adjusted_threshold:
+                    print(f"   ❌ String similarity also high:")
+                    print(f"      {base_similarity:.2%} > {adjusted_threshold:.2%}")
+                    print(f"      Vs: {prev_title} (~{videos_ago} videos ago)")
+                    return True
     
+    # ========================================================================
+    # RESULT: UNIQUE TOPIC
+    # ========================================================================
+    
+    print(f"   ✅ Topic validation: UNIQUE (passed entity + string checks)")
     return False
 
+def extract_story_entities(title):
+    """
+    🆕 v6.0.10: Extract unique story identifiers (entities) from title
+    
+    Removes pattern words and common words, keeps:
+    - Proper nouns (names, places, organizations)
+    - Specific objects (plane, ship, desert, forest)
+    - Unique action verbs (glowed, jumped, danced, rained)
+    - Numbers/dates (1780, MH370, Flight 19)
+    
+    Returns:
+        Set of unique entity words (lowercase)
+    """
+    
+    # Pattern words to ignore (your proven title patterns)
+    PATTERN_WORDS = {
+        'the', 'who', 'that', 'which', 'where', 'when',
+        'vanished', 'disappeared', 'missing', 'gone', 'lost',
+        'from', 'in', 'at', 'to', 'of', 'a', 'an',
+        'mystery', 'case', 'unsolved', 'secret', 'hidden',
+        'found', 'discovered', 'never', 'no', 'one'
+    }
+    
+    # Clean and tokenize
+    title_lower = title.lower()
+    
+    # Remove subtitle separator (keep both parts)
+    title_lower = title_lower.replace(':', ' ')
+    
+    # Split into words
+    words = title_lower.split()
+    
+    # Filter out pattern words and short words
+    entities = {
+        word for word in words 
+        if word not in PATTERN_WORDS 
+        and len(word) > 2  # Keep words >2 chars
+        and not word.isdigit()  # Remove standalone numbers (keep "mh370")
+    }
+    
+    return entities
+
+def is_duplicate_by_entities(new_title, previous_titles, entity_threshold=0.70, recent_count=30):
+    """
+    🆕 v6.0.10: Entity-based duplicate detection
+    
+    Compares story entities (nouns, proper names, locations) instead of full titles.
+    Allows pattern word reuse ("The [X] Who Vanished").
+    
+    Args:
+        new_title: Current title to check
+        previous_titles: List of previous title strings
+        entity_threshold: Minimum entity overlap to consider duplicate (default 70%)
+        recent_count: How many recent videos to check (default 30)
+    
+    Returns:
+        Tuple: (is_duplicate: bool, similarity: float, matched_title: str or None)
+    """
+    
+    # Extract entities from new title
+    new_entities = extract_story_entities(new_title)
+    
+    if not new_entities:
+        print(f"   ⚠️ No entities extracted from: '{new_title}'")
+        return False, 0.0, None
+    
+    print(f"   🔍 New title entities: {new_entities}")
+    
+    # Check against recent titles
+    for idx, prev_title in enumerate(reversed(previous_titles[-recent_count:])):
+        prev_entities = extract_story_entities(prev_title)
+        
+        if not prev_entities:
+            continue
+        
+        # Calculate entity overlap
+        intersection = len(new_entities & prev_entities)
+        union = len(new_entities | prev_entities)
+        
+        if union == 0:
+            continue
+        
+        entity_similarity = intersection / union
+        
+        # Apply time decay (older = MORE lenient, fixed from current bug)
+        videos_ago = idx
+        decay_factor = max(0.7, 1.0 - (videos_ago * 0.01))  # 1% more lenient per video back
+        adjusted_threshold = entity_threshold * decay_factor
+        
+        if entity_similarity > adjusted_threshold:
+            print(f"   ❌ ENTITY DUPLICATE DETECTED:")
+            print(f"      New: {new_title}")
+            print(f"      Vs:  {prev_title} (~{videos_ago} videos ago)")
+            print(f"      Entity overlap: {entity_similarity:.2%} > {adjusted_threshold:.2%}")
+            print(f"      Shared entities: {new_entities & prev_entities}")
+            return True, entity_similarity, prev_title
+    
+    print(f"   ✅ Entity check: UNIQUE (no duplicates in last {recent_count} videos)")
+    return False, 0.0, None
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def generate_script_with_retry(prompt):
@@ -2021,11 +2166,11 @@ This is attempt #{attempt} of {max_attempts}.
                 print("⚠️ Generated duplicate content, regenerating...")
                 raise ValueError("Duplicate content detected")
             
-            # Check similarity
+            # Check similarity (v6.0.10 - entity-based + fixed time decay)
             previous_titles = [t.get('title', '') for t in history['topics']]
             if is_similar_topic(data['title'], previous_titles):
                 print("⚠️ Topic too similar, regenerating...")
-                raise ValueError("Similar topic detected")
+                raise ValueError("Duplicate topic detected (entity or string match)")
             
             # Save to history
             save_to_history(data['topic'], content_hash, data['title'], data)

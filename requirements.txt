@@ -33,3 +33,4 @@ requests-toolbelt
 
 pytz
 urllib3>=1.26.18
+feedparser>=6.0.10

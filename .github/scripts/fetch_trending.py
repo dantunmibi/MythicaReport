@@ -354,6 +354,69 @@ def get_category_subreddits(category: str) -> List[str]:
     
     return selected_subs
 
+def get_google_news_mystery() -> List[str]:
+    """
+    🆕 v6.0.9: Fetch trending mystery news via Google News RSS
+    
+    100% reliable - RSS feeds are official Google service
+    No API key needed, no rate limits, no 403 errors
+    
+    Returns:
+        List of news article titles related to mysteries
+    """
+    try:
+        import feedparser
+        
+        print("📰 Fetching Google News mystery topics...")
+        
+        # Use category-specific search terms
+        news_queries = get_category_search_terms(MYSTERY_CATEGORY)[:5]
+        
+        print(f"   📡 Using {len(news_queries)} search queries for '{MYSTERY_CATEGORY}'")
+        
+        trends = []
+        
+        for query in news_queries:
+            try:
+                # Google News RSS feed URL
+                # Format: news.google.com/rss/search?q=QUERY&hl=en-US&gl=US&ceid=US:en
+                rss_url = f"https://news.google.com/rss/search?q={query.replace(' ', '+')}&hl=en-US&gl=US&ceid=US:en"
+                
+                print(f"   🔍 Searching news for: {query}")
+                
+                # Parse RSS feed
+                feed = feedparser.parse(rss_url)
+                
+                # Extract article titles
+                for entry in feed.entries[:5]:
+                    title = entry.title
+                    
+                    # Remove news source suffix (e.g., " - CNN", " - BBC News")
+                    title = re.sub(r'\s*-\s*[A-Z][a-zA-Z\s&.]+$', '', title)
+                    
+                    # Basic quality filters
+                    if len(title) > 20 and is_mystery_query(title):
+                        trends.append(title)
+                        print(f"      ✓ {title[:70]}")
+                
+                # Small delay to be respectful
+                time.sleep(random.uniform(0.3, 0.7))
+                
+            except Exception as e:
+                print(f"   ⚠️ Failed for '{query}': {str(e)[:50]}...")
+                continue
+        
+        print(f"✅ Found {len(trends)} trends from Google News")
+        return trends[:15]
+        
+    except ImportError:
+        print("⚠️ feedparser not installed - skipping Google News")
+        print("   Install with: pip install feedparser")
+        return []
+    except Exception as e:
+        print(f"⚠️ Google News failed: {e}")
+        return []
+
 def get_google_trends_mystery() -> List[str]:
     """Get real trending mystery-related searches from Google Trends"""
     try:
@@ -588,28 +651,162 @@ def is_mystery_title(title: str) -> bool:
     return has_good and not has_bad and len(title) > 20
 
 
-def get_evergreen_mystery_themes() -> List[str]:
-    """Classic mystery topics"""
-    evergreen = [
-        "The Vanishing of the Mary Celeste Crew",
-        "The Uncrackable Code of the Zodiac Killer",
-        "Who Was D.B. Cooper? The Skyjacker Who Disappeared",
-        "The Lost Colony of Roanoke: A 400-Year-Old Mystery",
-        "The Chilling Case of the Dyatlov Pass Incident",
-        "The Wow! Signal: A Message From Deep Space?",
-        "The Mystery of the Bermuda Triangle's Vanishing Ships",
-        "The Tunguska Event: The Day a Forest Was Flattened",
-        "What is The Hum? The Unexplained Sound Heard Worldwide",
-        "The Quest to Solve Cicada 3301: The Internet's Hardest Puzzle",
-        "The Eerie Last Online Posts of People Who Vanished",
-        "Lake City Quiet Pills: The Cryptic Reddit Mystery",
-        "Numbers Stations: Ghostly Radio Broadcasts",
-        "Lost Treasures That Are Still Waiting To Be Found",
-        "The World's Most Mysterious Books That No One Can Read"
-    ]
+def get_evergreen_mystery_themes(category: str = 'general') -> List[str]:
+    """
+    🆕 v6.0.9: Category-specific evergreen topics
+    Ensures fallback topics match the mystery category
     
-    print(f"✅ Loaded {len(evergreen)} evergreen mystery themes")
-    return evergreen
+    Args:
+        category: Mystery category (disturbing_medical, dark_experiments, etc.)
+    
+    Returns:
+        List of category-appropriate evergreen topics
+    """
+    
+    evergreen_by_category = {
+        'disturbing_medical': [
+            "The Man Who Never Slept: Fatal Insomnia Mystery",
+            "The Disease That Turns You To Stone: FOP Case",
+            "The Town That Went Blind: Minamata Outbreak",
+            "The Laughing Death That Spread: Kuru Disease",
+            "The Dancing Plague of 1518: Strasbourg Mania",
+            "The Sleeping Sickness Epidemic: Encephalitis Lethargica",
+            "The Girl Who Aged Decades: Progeria Mystery",
+            "The Blue People of Kentucky: Methemoglobinemia",
+            "The Stone Man Syndrome: FOP Medical Mystery",
+            "The Fatal Familial Insomnia Cases",
+            "The Radium Girls: Glowing Death Mystery",
+            "The Tanganyika Laughing Epidemic: 1962 Outbreak",
+            "The Ergot Poisoning: Dancing Mania Mystery",
+            "The Mysterious Paralysis: Polio Outbreaks",
+            "The Encephalitis Lethargica: Sleeping Sickness",
+        ],
+        
+        'dark_experiments': [
+            "The CIA Mind Control Experiment: MK-Ultra Files",
+            "The Prison Study Gone Wrong: Stanford 1971",
+            "The 40-Year Lie: Tuskegee Experiment",
+            "The Japanese War Crimes: Unit 731 Research",
+            "The Russian Sleep Deprivation: Experiment Mystery",
+            "The CIA Truth Serum Tests: Project Artichoke",
+            "The Obedience Study: Milgram Experiment Revealed",
+            "The Secret Chemical Tests: Edgewood Arsenal",
+            "The Stuttering Experiment: The Monster Study",
+            "The Nazi Scientists Recruited: Project Paperclip",
+            "The LSD Experiments: CIA Midnight Climax",
+            "The Poison Squad Trials: Food Safety Tests",
+            "The Radiation Experiments: Cold War Secrets",
+            "The Electroshock Studies: Brain Modification",
+            "The Sensory Deprivation Tests: CIA Research",
+        ],
+        
+        'dark_history': [
+            "The Day It Rained Meat: 1876 Kentucky Mystery",
+            "The Dark Day of 1780: New England Blackout",
+            "The Dancing Plague of 1518: Strasbourg Event",
+            "The Radium Girls Who Glowed: Factory Deaths",
+            "The Great Molasses Flood: 1919 Boston Disaster",
+            "The Year Without Summer: 1816 Climate Mystery",
+            "The Children's Crusade: 1212 Historical Mystery",
+            "The Halifax Explosion: 1917 Disaster",
+            "The Donner Party Tragedy: 1846 Survival Horror",
+            "The Tunguska Event: 1908 Siberian Blast",
+            "The Burning of Centralia: Town on Fire Since 1962",
+            "The Great Fire of London: 1666 Mystery",
+            "The Black Death Plague: Medieval Pandemic",
+            "The Plague of Justinian: Byzantine Disaster",
+            "The Year of the Four Emperors: Roman Mystery",
+        ],
+        
+        'disappearance': [
+            "The Vanishing Crew: Mary Celeste Mystery",
+            "The Skyjacker Who Disappeared: D.B. Cooper",
+            "The Lost Colony: Roanoke 400-Year Mystery",
+            "The Five Planes That Vanished: Flight 19",
+            "The Bermuda Triangle: Vanishing Ships Mystery",
+            "The Final Flight: Amelia Earhart Mystery",
+            "The Nine Hikers Found Dead: Dyatlov Pass",
+            "The Missing Airliner: MH370 Mystery",
+            "The Lighthouse Keepers Who Vanished: Flannan Isles",
+            "The Union Boss Who Disappeared: Jimmy Hoffa",
+            "The Student Who Vanished: Maura Murray Case",
+            "The Hiker Who Never Returned: Brandon Swanson",
+            "The Teenager Who Disappeared: Asha Degree",
+            "The College Student Gone: Brian Shaffer",
+            "The Road Trip Mystery: Leah Roberts",
+        ],
+        
+        'phenomena': [
+            "The Signal From Deep Space: Wow! Mystery",
+            "The Unexplained Hum: Worldwide Phenomenon",
+            "The Norway Mystery Lights: Hessdalen",
+            "The Underwater Sound Mystery: The Bloop",
+            "The Ghost Radio Broadcasts: Numbers Stations",
+            "The Siberian Explosion: Tunguska Event",
+            "The Cosmic Mystery Signals: Fast Radio Bursts",
+            "The Unexplained Phenomenon: Ball Lightning",
+            "The New Mexico Mystery: Taos Hum",
+            "The Texas Lights Mystery: Marfa Phenomenon",
+            "The Mysterious Radio Signal: UVB-76",
+            "The Space Anomaly: Oumuamua Mystery",
+            "The Lake Monster Sightings: Nessie Mystery",
+            "The UFO Incident: Phoenix Lights",
+            "The Mysterious Crop Circles: Field Patterns",
+        ],
+        
+        'crime': [
+            "The Unsolved Cipher: Zodiac Killer Mystery",
+            "The 1888 London Murders: Jack the Ripper",
+            "The Black Dahlia Murder: Elizabeth Short Case",
+            "The Child Murder Mystery: JonBenét Ramsey",
+            "The Beach Body Mystery: Somerton Man",
+            "The Boy in the Box: Philadelphia 1957",
+            "The Jazz Age Serial Killer: Axeman of New Orleans",
+            "The Torso Murders: Cleveland 1930s Mystery",
+            "The Iowa Massacre: Villisca Axe Murders",
+            "The New Jersey Murder: Hall-Mills Case",
+            "The Valentine's Day Massacre: Chicago 1929",
+            "The Lizzie Borden Case: 1892 Mystery",
+            "The Cleveland Kidnappings: Ariel Castro",
+            "The Golden State Killer: East Area Rapist",
+            "The Boston Strangler: Albert DeSalvo",
+        ],
+        
+        'conspiracy': [
+            "The Area 51 Secrets: What's Really There",
+            "The Philadelphia Experiment: Navy Mystery",
+            "The Montauk Project: Time Travel Claims",
+            "The Roswell Incident: UFO Cover-Up Mystery",
+            "The JFK Files: Assassination Conspiracy",
+            "The Moon Landing Hoax Claims: Debunked Mystery",
+            "The Illuminati Conspiracy: Secret Society",
+            "The New World Order: Global Control Theory",
+            "The Flat Earth Theory: Modern Conspiracy",
+            "The Chemtrails Conspiracy: Sky Mystery",
+        ],
+        
+        'general': [
+            "The Vanishing Crew: Mary Celeste Mystery",
+            "The Unsolved Cipher: Zodiac Killer",
+            "The Skyjacker Who Disappeared: D.B. Cooper",
+            "The Lost Colony: Roanoke Mystery",
+            "The Nine Hikers Found Dead: Dyatlov Pass",
+            "The Signal From Deep Space: Wow! Mystery",
+            "The Bermuda Triangle: Vanishing Ships",
+            "The Siberian Explosion: Tunguska Event",
+            "The Unexplained Hum: Worldwide Phenomenon",
+            "The Missing Airliner: MH370 Mystery",
+            "The CIA Mind Control: MK-Ultra Files",
+            "The Dancing Plague: 1518 Strasbourg",
+            "The Radium Girls: Glowing Death",
+            "The Prison Study: Stanford 1971",
+            "The Town That Went Blind: Minamata",
+        ]
+    }
+    
+    selected = evergreen_by_category.get(category, evergreen_by_category['general'])
+    print(f"✅ Loaded {len(selected)} category-specific evergreen themes ({category})")
+    return selected
 
 
 def get_real_mystery_trends() -> List[str]:
@@ -622,6 +819,7 @@ def get_real_mystery_trends() -> List[str]:
     all_trends = []
     source_counts = {}
     
+    # Source 1: Google Trends (search trends)
     try:
         google_trends = get_google_trends_mystery()
         all_trends.extend(google_trends)
@@ -629,12 +827,16 @@ def get_real_mystery_trends() -> List[str]:
     except Exception as e:
         print(f"⚠️ Google Trends error: {e}")
 
+    # Source 2: Google News RSS (NEW - v6.0.9)
     try:
-        reddit_trends = get_reddit_mystery_trends()
-        all_trends.extend(reddit_trends)
-        source_counts['Reddit'] = len(reddit_trends)
+        news_trends = get_google_news_mystery()
+        all_trends.extend(news_trends)
+        source_counts['Google News'] = len(news_trends)
     except Exception as e:
-        print(f"⚠️ Reddit error: {e}")
+        print(f"⚠️ Google News error: {e}")
+
+    # Reddit DISABLED (403 Forbidden - requires OAuth API)
+    print("⏭️ Skipping Reddit (403 forbidden - requires OAuth API)")
 
     try:
         youtube_trends = get_youtube_mystery_trends()
@@ -643,7 +845,8 @@ def get_real_mystery_trends() -> List[str]:
     except Exception as e:
         print(f"⚠️ YouTube error: {e}")
     
-    evergreen = get_evergreen_mystery_themes()
+    # 🆕 v6.0.9: Category-aware evergreen
+    evergreen = get_evergreen_mystery_themes(MYSTERY_CATEGORY)
     all_trends.extend(evergreen)
     source_counts['Evergreen'] = len(evergreen)
     
@@ -919,6 +1122,46 @@ def filter_and_rank_mystery_trends(trends: List[str], history: Dict[str, Any]) -
     
     previous_titles = [item.get('title', '') for item in history.get('topics', [])[-30:]]
 
+    # 🆕 v6.0.9: Category enforcement
+    category_descriptions = {
+        'disturbing_medical': 'Medical mysteries, diseases, syndromes, mysterious illnesses, medical anomalies',
+        'dark_experiments': 'Unethical experiments, secret research, CIA/government studies, psychological tests',
+        'dark_history': 'Mysterious historical events from 1400s-1900s, dark historical phenomena',
+        'disappearance': 'Missing persons, vanished ships/planes, unexplained disappearances',
+        'phenomena': 'Unexplained phenomena, mysterious signals/lights/sounds, paranormal events',
+        'crime': 'Unsolved murders, cold cases, serial killers, true crime mysteries',
+        'conspiracy': 'Cover-ups, conspiracies, classified information, secret projects',
+        'general': 'All mystery types'
+    }
+    
+    category_desc = category_descriptions.get(MYSTERY_CATEGORY, 'mystery topics')
+    
+    if MYSTERY_CATEGORY != 'general':
+        category_enforcement = f"""
+
+🚨 CRITICAL CATEGORY REQUIREMENT - MUST FOLLOW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+You are selecting topics for the '{MYSTERY_CATEGORY}' category.
+
+Category focus: {category_desc}
+
+MANDATORY RULES:
+1. You MUST prioritize topics that match '{MYSTERY_CATEGORY}'
+2. REJECT topics from other categories (disappearances, space events, etc.)
+3. If only 3 topics match the category, select those 3 (don't fill with generic)
+4. Generic mystery topics (Mary Celeste, DB Cooper, Roanoke) should be REJECTED
+   unless they fit the current category
+
+Example for '{MYSTERY_CATEGORY}':
+✅ ACCEPT: Topics about {category_desc}
+❌ REJECT: Generic disappearances, space mysteries, historical events (unless category is dark_history)
+
+Your output MUST contain topics matching '{MYSTERY_CATEGORY}' ONLY.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+    else:
+        category_enforcement = ""
+    
     prompt = f"""You are a viral content strategist for "Mythica Report," a YouTube Shorts channel.
 
 ANALYZING RAW TRENDING MYSTERY TOPICS:
@@ -926,6 +1169,7 @@ ANALYZING RAW TRENDING MYSTERY TOPICS:
 
 **CRITICAL: AVOID RECENTLY COVERED TOPICS:**
 {chr(10).join(f"- {title}" for title in previous_titles) if previous_titles else "None yet."}
+{category_enforcement}
 
 🚨 TITLE PATTERN REQUIREMENTS (RETENTION-CRITICAL):
 
